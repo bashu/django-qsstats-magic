@@ -114,7 +114,7 @@ class QuerySetStats(object):
 
         today = _remove_time(compat.now())
         def to_dt(d):
-            if isinstance(d, basestring):
+            if isinstance(d, str):
                 return parse(d, yearfirst=True, default=today)
             return d
 
