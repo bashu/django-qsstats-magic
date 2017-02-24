@@ -13,6 +13,8 @@ from django.conf import settings
 from qsstats.utils import get_bounds, _to_datetime, _parse_interval, get_interval_sql, _remove_time
 from qsstats import compat
 from qsstats.exceptions import *
+from past.builtins import basestring
+
 
 class QuerySetStats(object):
     """
