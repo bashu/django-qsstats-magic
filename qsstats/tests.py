@@ -21,7 +21,7 @@ class QuerySetStatsTestCase(TestCase):
         qss = QuerySetStats(qs, 'date_joined')
 
         # We should only see a single user
-        self.assertEqual(qss.this_day(), 1)
+        self.assertEqual(qss.this_day()[0], 1)
 
     def assertTimeSeriesWorks(self, today):
         seven_days_ago = today - datetime.timedelta(days=7)
@@ -66,10 +66,10 @@ class QuerySetStatsTestCase(TestCase):
         qs = User.objects.all()
         qss = QuerySetStats(qs, 'date_joined')
 
-        self.assertEqual(qss.until(now), 1)
-        self.assertEqual(qss.until(today), 1)
-        self.assertEqual(qss.until(yesterday), 0)
-        self.assertEqual(qss.until_now(), 1)
+        self.assertEqual(qss.until(now)[0], 1)
+        self.assertEqual(qss.until(today)[0], 1)
+        self.assertEqual(qss.until(yesterday)[0], 0)
+        self.assertEqual(qss.until_now()[0], 1)
 
     def test_after(self):
         now = compat.now()
@@ -83,11 +83,11 @@ class QuerySetStatsTestCase(TestCase):
         qs = User.objects.all()
         qss = QuerySetStats(qs, 'date_joined')
 
-        self.assertEqual(qss.after(today), 1)
-        self.assertEqual(qss.after(now), 0)
+        self.assertEqual(qss.after(today)[0], 1)
+        self.assertEqual(qss.after(now)[0], 0)
         u.date_joined=tomorrow
         u.save()
-        self.assertEqual(qss.after(now), 1)
+        self.assertEqual(qss.after(now)[0], 1)
 
     # MC_TODO: aggregate_field tests
 

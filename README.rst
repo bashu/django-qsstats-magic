@@ -36,11 +36,11 @@ How many users signed up today? this month? this year?
     qs = User.objects.all()
     qss = qsstats.QuerySetStats(qs, 'date_joined')
 
-    print '%s new accounts today.' % qss.this_day()
-    print '%s new accounts this week.' % qss.this_week()
-    print '%s new accounts this month.' % qss.this_month()
-    print '%s new accounts this year.' % qss.this_year()
-    print '%s new accounts until now.' % qss.until_now()
+    print '%s new accounts today.' % qss.this_day()[0]
+    print '%s new accounts this week.' % qss.this_week()[0]
+    print '%s new accounts this month.' % qss.this_month()[0]
+    print '%s new accounts this year.' % qss.this_year()[0]
+    print '%s new accounts until now.' % qss.until_now()[0]
 
 This might print something like::
 
@@ -61,9 +61,6 @@ Aggregating time-series data suitable for graphing
     qs = User.objects.all()
     qss = qsstats.QuerySetStats(qs, 'date_joined')
 
-    today = datetime.date.today()
-    seven_days_ago = today - datetime.timedelta(days=7)
-
     time_series = qss.time_series(seven_days_ago, today)
     print 'New users in the last 7 days: %s' % [t[1] for t in time_series]
 
@@ -73,6 +70,32 @@ This might print something like::
 
 
 Please see qsstats/tests.py for similar usage examples.
+
+Multiple aggregates
+-------------------
+
+::
+
+    from my_store_app.models import Purchase
+    from django.db.models import Sum, Count
+    import datetime, qsstats
+
+    qs = Purchase.objects.all()
+    qss = qsstats.QuerySetStats(qs, 'date_purchased', aggregates=[Count('id'), Sum('amount')])
+
+    print '%s Purchases of value %s today.' % tuple(qss.this_day())
+    print '%s Purchases of value %s this week.' % tuple(qss.this_week())
+    print '%s Purchases of value %s this month.' % tuple(qss.this_month())
+    print '%s Purchases of value %s this year.' % tuple(qss.this_year())
+    print '%s Purchases of value %s until now.' % tuple(qss.until_now())
+
+This might print something like::
+
+    5 Purchases of value 50 today.
+    11 Purchases of value 110 this week.
+    27 Purchases of value 270 this month.
+    377 Purchases of value 3770 year.
+    409 Purchases of value 4090 until now.
 
 API
 ===
@@ -96,11 +119,12 @@ without providing enough information.
 
     Default: ``None``
 
-``aggregate``
-    The django aggregation instance. Can be set also set when
-    instantiating or calling one of the methods.
+``aggregates``
+    A list of django aggregation instances. Can be set also set when
+    instantiating or calling one of the methods. You can also pass
+    one aggregation instance.
 
-    Default: ``Count('id')``
+    Default: ``[Count('id')]``
 
 ``operator``
     The default operator to use for the ``pivot`` function.  Can be also set
@@ -117,7 +141,7 @@ without providing enough information.
 
 All of the documented methods take a standard set of keyword arguments
 that override any information already stored within the ``QuerySetStats``
-object.  These keyword arguments are ``date_field`` and ``aggregate``.
+object.  These keyword arguments are ``date_field`` and ``aggregates``.
 
 Once you have a ``QuerySetStats`` object instantiated, you can receive a
 single aggregate result by using the following methods:
@@ -152,7 +176,7 @@ time-series data which may be extremely using in plotting data:
     the start and stop of the time series data.
 
     Keyword arguments: In addition to the standard ``date_field`` and
-    ``aggregate`` keyword argument, ``time_series`` takes an optional
+    ``aggregates`` keyword argument, ``time_series`` takes an optional
     ``interval`` keyword argument used to mark which interval to use while
     calculating aggregate data between ``start`` and ``end``.  This argument
     defaults to ``'days'`` and can accept ``'years'``, ``'months'``,
@@ -161,7 +185,7 @@ time-series data which may be extremely using in plotting data:
 
     This methods returns a list of tuples.  The first item in each
     tuple is a ``datetime.datetime`` object for the current inverval.  The
-    second item is the result of the aggregate operation.  For
+    other items are the results of the aggregates operations.  For
     example::
 
         [(datetime.datetime(2010, 3, 28, 0, 0), 12), (datetime.datetime(2010, 3, 29, 0, 0), 0), ...]
@@ -176,7 +200,7 @@ time-series data which may be extremely using in plotting data:
     Positional arguments: ``dt`` a ``datetime.date`` or ``datetime.datetime``
     object to be used for filtering the queryset since.
 
-    Keyword arguments: ``date_field``, ``aggregate``.
+    Keyword arguments: ``date_field``, ``aggregates``.
 
 ``until_now``
     Aggregate information until now.
@@ -184,7 +208,7 @@ time-series data which may be extremely using in plotting data:
     Positional arguments: ``dt`` a ``datetime.date`` or ``datetime.datetime``
     object to be used for filtering the queryset since (using ``lte``).
 
-    Keyword arguments: ``date_field``, ``aggregate``.
+    Keyword arguments: ``date_field``, ``aggregates``.
 
 ``after``
     Aggregate information after a given date or time, filtering the queryset
@@ -193,7 +217,7 @@ time-series data which may be extremely using in plotting data:
     Positional arguments: ``dt`` a ``datetime.date`` or ``datetime.datetime``
     object to be used for filtering the queryset since.
 
-    Keyword arguments: ``date_field``, ``aggregate``.
+    Keyword arguments: ``date_field``, ``aggregates``.
 
 ``after_now``
     Aggregate information after now.
@@ -201,7 +225,7 @@ time-series data which may be extremely using in plotting data:
     Positional arguments: ``dt`` a ``datetime.date`` or ``datetime.datetime``
     object to be used for filtering the queryset since (using ``gte``).
 
-    Keyword arguments: ``date_field``, ``aggregate``.
+    Keyword arguments: ``date_field``, ``aggregates``.
 
 ``pivot``
     Used by ``since``, ``after``, and ``until_now`` but potentially useful if
@@ -210,7 +234,7 @@ time-series data which may be extremely using in plotting data:
     Positional arguments: ``dt`` a ``datetime.date`` or ``datetime.datetime``
     object to be used for filtering the queryset since (using ``lte``).
 
-    Keyword arguments: ``operator``, ``date_field``, ``aggregate``.
+    Keyword arguments: ``operator``, ``date_field``, ``aggregates``.
 
     Raises ``InvalidOperator`` if the operator provided is not one of ``'lt'``,
     ``'lte'``, ``gt`` or ``gte``.
@@ -235,8 +259,8 @@ Difference from django-qsstats
 
 1. Faster time_series method using 1 sql query (currently works for MySQL and
    PostgreSQL, with a fallback to the old method for other DB backends).
-2. Single ``aggregate`` parameter instead of ``aggregate_field`` and
-   ``aggregate_class``. Default value is always ``Count('id')`` and can't be
+2. Single ``aggregates`` parameter instead of ``aggregate_field`` and
+   ``aggregate_class``. Default value is always ``[Count('id')]`` and can't be
    specified in settings.py. ``QUERYSETSTATS_DEFAULT_OPERATOR`` option is also
    unsupported now.
 3. Support for minute and hour aggregates.
@@ -247,3 +271,9 @@ Difference from django-qsstats
 I don't know if original author (Matt Croydon) would like my changes so
 I renamed a project for now. If the changes will be merged then
 django-qsstats-magic will become obsolete.
+
+New in 0.8.0
+============
+
+* Changed ``aggregate`` to ``aggregates`` and now the framework returns a list of
+  aggregate information instead of only one.
