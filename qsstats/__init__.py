@@ -1,11 +1,14 @@
+import datetime
 import warnings
-from datetime import datetime
 from functools import partial
+from typing import Any
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import transaction
+from django.db.models import Aggregate
 from django.db.models import Count
 from django.db.models import DateTimeField
+from django.db.models import QuerySet
 from django.db.models.functions import Trunc
 from django.utils import timezone
 
@@ -43,7 +46,13 @@ class QuerySetStats:
     year) or generate time series data suitable for graphing.
     """
 
-    def __init__(self, qs=None, date_field=None, aggregate=None, today=None):
+    def __init__(
+        self,
+        qs: QuerySet | None = None,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+        today: datetime.datetime | None = None,
+    ):
         self.qs = qs
         self.date_field = date_field
         self.aggregate = aggregate or Count("id", distinct=True)
@@ -51,13 +60,24 @@ class QuerySetStats:
 
     # Aggregates for a specific period of time
 
-    def for_interval(self, interval, dt, date_field=None, aggregate=None):
+    def for_interval(
+        self,
+        interval: str,
+        dt: datetime.datetime | datetime.date,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> Any | None:
         start, end = utils.get_bounds(dt, interval)
         date_field = date_field or self.date_field
         kwargs = {f"{date_field}__range": (start, end)}
         return self._aggregate(date_field, aggregate, kwargs)
 
-    def this_interval(self, interval, date_field=None, aggregate=None):
+    def this_interval(
+        self,
+        interval: str,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> Any | None:
         method = getattr(self, f"for_{interval}")
         return method(self.today, date_field, aggregate)
 
@@ -69,15 +89,15 @@ class QuerySetStats:
             return partial(self.this_interval, name[5:])
         raise AttributeError
 
-    def time_series(  # noqa: PLR0917, PLR0913
+    def time_series(  # noqa: PLR0913, PLR0917
         self,
-        start,
-        end=None,
-        interval="days",
-        date_field=None,
-        aggregate=None,
+        start: datetime.datetime | datetime.date,
+        end: datetime.datetime | datetime.date | None = None,
+        interval: str = "days",
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
         engine=None,
-    ):
+    ) -> list[tuple[datetime.datetime, int]]:
         """Aggregate over time intervals"""
 
         end = end or self.today
@@ -95,12 +115,12 @@ class QuerySetStats:
 
     def _slow_time_series(
         self,
-        start,
-        end,
-        interval="days",
-        date_field=None,
-        aggregate=None,
-    ):
+        start: datetime.datetime | datetime.date,
+        end: datetime.datetime | datetime.date,
+        interval: str = "days",
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> list[tuple[datetime.datetime, int]]:
         """Aggregate over time intervals using 1 sql query for one interval"""
 
         num, interval = utils._parse_interval(interval)  # noqa: SLF001
@@ -124,12 +144,12 @@ class QuerySetStats:
 
     def _fast_time_series(
         self,
-        start,
-        end,
-        interval="days",
-        date_field=None,
-        aggregate=None,
-    ):
+        start: datetime.datetime | datetime.date,
+        end: datetime.datetime | datetime.date,
+        interval: str = "days",
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> list[tuple[datetime.datetime, int]]:
         """Aggregate over time intervals using just 1 sql query"""
 
         date_field = date_field or self.date_field
@@ -167,11 +187,13 @@ class QuerySetStats:
 
         today = utils._remove_time(timezone.now())  # noqa: SLF001
 
-        def to_dt(d):
+        def to_dt(
+            d: datetime.datetime | datetime.date | str,
+        ) -> datetime.datetime:
             if isinstance(d, string_types):
                 return parse(d, yearfirst=True, default=today)
             if type(d).__name__ == "date":
-                return datetime(
+                return datetime.datetime(
                     year=d.year,
                     month=d.month,
                     day=d.day,
@@ -199,19 +221,43 @@ class QuerySetStats:
 
     # Aggregate totals using a date or datetime as a pivot
 
-    def until(self, dt, date_field=None, aggregate=None):
+    def until(
+        self,
+        dt: datetime.datetime | datetime.date,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> Any | None:
         return self.pivot(dt, "lte", date_field, aggregate)
 
-    def until_now(self, date_field=None, aggregate=None):
+    def until_now(
+        self,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> Any | None:
         return self.pivot(timezone.now(), "lte", date_field, aggregate)
 
-    def after(self, dt, date_field=None, aggregate=None):
+    def after(
+        self,
+        dt: datetime.datetime | datetime.date,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> Any | None:
         return self.pivot(dt, "gte", date_field, aggregate)
 
-    def after_now(self, date_field=None, aggregate=None):
+    def after_now(
+        self,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> Any | None:
         return self.pivot(timezone.now(), "gte", date_field, aggregate)
 
-    def pivot(self, dt, operator=None, date_field=None, aggregate=None):
+    def pivot(
+        self,
+        dt: datetime.datetime | datetime.date,
+        operator=None,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+    ) -> Any | None:
         operator = operator or self.operator
         if operator not in ["lt", "lte", "gt", "gte"]:
             msg = "Please provide a valid operator."
@@ -221,12 +267,17 @@ class QuerySetStats:
         return self._aggregate(date_field, aggregate, kwargs)
 
     # Utility functions
-    def update_today(self):
+    def update_today(self) -> datetime.datetime:
         _now = timezone.now()
         self.today = utils._remove_time(_now)  # noqa: SLF001
         return self.today
 
-    def _aggregate(self, date_field=None, aggregate=None, filter_kwargs=None):
+    def _aggregate(
+        self,
+        date_field: str | None = None,
+        aggregate: Aggregate | None = None,
+        filter_kwargs: dict | None = None,
+    ) -> Any | None:
         date_field = date_field or self.date_field
         aggregate = aggregate or self.aggregate
 
