@@ -18,7 +18,8 @@ repetitive tasks such as generating aggregate statistics of querysets
 over time easier.  It's probably overkill for the task at hand, but yay
 microframeworks!
 
-django-qsstats-magic is a refactoring of django-qsstats app with slightly
+django-qsstats-magic is a refactoring of `django-qsstats
+<https://github.com/mcroydon/django-qsstats>`_ app with slightly
 changed API, simplified internals and faster time_series implementation.
 
 Maintained by `Basil Shubin <https://github.com/bashu/>`_, and some great
