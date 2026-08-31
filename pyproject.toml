@@ -4,7 +4,7 @@ requires = [ "setuptools>=61" ]
 
 [project]
 name = "django-qsstats-magic"
-version = "1.1.0"
+version = "1.1.1"
 description = "A django microframework that eases the generation of aggregate data for querysets."
 license = "BSD-3-Clause"
 maintainers = [ { name = "Basil Shubin", email = "basil.shubin@gmail.com" } ]
