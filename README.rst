@@ -1,6 +1,17 @@
-====================================================
-django-qsstats-magic: QuerySet statistics for Django
-====================================================
+django-qsstats-magic
+====================
+
+.. image:: https://badge.fury.io/py/django-qsstats-magic.svg
+    :target: https://badge.fury.io/py/django-qsstats-magic
+
+.. image:: https://img.shields.io/pypi/pyversions/django-qsstats-magic.svg
+    :target: https://pypi.python.org/pypi/django-qsstats-magic/
+
+.. image:: https://img.shields.io/pypi/djversions/django-qsstats-magic.svg
+    :target: https://pypi.python.org/pypi/django-qsstats-magic/
+
+.. image:: https://github.com/bashu/django-qsstats-magic/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/bashu/django-qsstats-magic/actions/workflows/test.yml
 
 The goal of django-qsstats is to be a microframework to make
 repetitive tasks such as generating aggregate statistics of querysets
@@ -10,35 +21,26 @@ microframeworks!
 django-qsstats-magic is a refactoring of django-qsstats app with slightly
 changed API, simplified internals and faster time_series implementation.
 
+Maintained by `Basil Shubin <https://github.com/bashu/>`_, and some great
+`contributors <https://github.com/bashu/django-qsstats-magic/contributors>`_.
 
-Requirements
-============
+Installation
+------------
 
-* `python-dateutil <http://labix.org/python-dateutil>`_ > 1.4, < 2.0
-* `django <http://www.djangoproject.com/>`_ 1.8+
+First install the module, preferably in a virtual environment. It can be installed from PyPI:
 
-Database
---------
+.. code-block:: shell
 
-If timezone support is enabled in Django, the database must have also timezone support installed.
-For MySQL it might be needed to run:
-
-::
-  - mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql
+    pip install django-qsstats-magic
 
 
-License
-=======
-
-Liensed under a BSD-style license.
-
-Examples
-========
+Usage
+-----
 
 How many users signed up today? this month? this year?
-------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-::
+.. code-block:: python
 
     from django.contrib.auth.models import User
     import qsstats
@@ -61,9 +63,9 @@ This might print something like::
     409 new accounts until now.
 
 Aggregating time-series data suitable for graphing
---------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-::
+.. code-block:: python
 
     from django.contrib.auth.models import User
     import datetime, qsstats
@@ -82,18 +84,18 @@ This might print something like::
     New users in the last 7 days: [3, 10, 7, 4, 12, 9, 11]
 
 
-Please see qsstats/tests.py for similar usage examples.
+Please see qsstats/tests/test_*.py for similar usage examples.
 
 API
-===
+---
 
 The ``QuerySetStats`` object
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In order to provide maximum flexibility, the ``QuerySetStats`` object
 can be instantiated with as little or as much information as you like.
-All keword arguments are optional but ``DateFieldMissing`` and
-``QuerySetMissing`` will be raised if you try to use ``QuerySetStats``
+All keyword arguments are optional but ``DateFieldMissingError`` and
+``QuerySetMissingError`` will be raised if you try to use ``QuerySetStats``
 without providing enough information.
 
 ``qs``
@@ -107,7 +109,7 @@ without providing enough information.
     Default: ``None``
 
 ``aggregate``
-    The django aggregation instance. Can be set also set when
+    The django aggregation instance. Can be also set when
     instantiating or calling one of the methods.
 
     Default: ``Count('id')``
@@ -154,7 +156,7 @@ single aggregate result by using the following methods:
     provide aggregate information for this current interval.
 
 ``QuerySetStats`` also provides a method for returning aggregated
-time-series data which may be extremely using in plotting data:
+time-series data which may be extremely useful in plotting data:
 
 ``time_series``
     Positional arguments: ``start`` and ``end``, each a
@@ -167,10 +169,10 @@ time-series data which may be extremely using in plotting data:
     calculating aggregate data between ``start`` and ``end``.  This argument
     defaults to ``'days'`` and can accept ``'years'``, ``'months'``,
     ``'weeks'``, ``'days'``, ``'hours'`` or ``'minutes'``.
-    It will raise ``InvalidInterval`` otherwise.
+    It will raise ``InvalidIntervalError`` otherwise.
 
     This methods returns a list of tuples.  The first item in each
-    tuple is a ``datetime.datetime`` object for the current inverval.  The
+    tuple is a ``datetime.datetime`` object for the current interval.  The
     second item is the result of the aggregate operation.  For
     example::
 
@@ -214,7 +216,7 @@ time-series data which may be extremely using in plotting data:
     Keyword arguments: ``date_field``, ``aggregate``.
 
 ``pivot``
-    Used by ``since``, ``after``, and ``until_now`` but potentially useful if
+    Used by ``until``, ``after``, and ``until_now`` but potentially useful if
     you would like to specify your own operator instead of the defaults.
 
     Positional arguments: ``dt`` a ``datetime.date`` or ``datetime.datetime``
@@ -222,11 +224,11 @@ time-series data which may be extremely using in plotting data:
 
     Keyword arguments: ``operator``, ``date_field``, ``aggregate``.
 
-    Raises ``InvalidOperator`` if the operator provided is not one of ``'lt'``,
+    Raises ``InvalidOperatorError`` if the operator provided is not one of ``'lt'``,
     ``'lte'``, ``gt`` or ``gte``.
 
 Testing
-=======
+-------
 
 If you'd like to test ``django-qsstats-magic`` against your local configuration, add
 ``qsstats`` to your ``INSTALLED_APPS`` and run ``./manage.py test qsstats``.
@@ -241,7 +243,7 @@ Db user 'qsstats_test' with password 'qsstats_test' and a DB 'qsstats_test'
 should exist.
 
 Difference from django-qsstats
-==============================
+------------------------------
 
 1. Faster time_series method using 1 sql query (currently works for MySQL and
    PostgreSQL, with a fallback to the old method for other DB backends).
@@ -257,3 +259,20 @@ Difference from django-qsstats
 I don't know if original author (Matt Croydon) would like my changes so
 I renamed a project for now. If the changes will be merged then
 django-qsstats-magic will become obsolete.
+
+Contributing
+------------
+
+If you've found a bug, implemented a feature or customized the template and
+think it is useful then please consider contributing. Patches, pull requests or
+just suggestions are welcome!
+
+Credits
+-------
+
+`django-qsstats-magic <https://github.com/bashu/django-qsstats-magic/>`_ was originally started by `Mikhail Korobov <http://kmike.ru/>`_ who has now unfortunately abandoned the project.
+
+License
+-------
+
+``django-qsstats-magic`` is released under the BSD license.

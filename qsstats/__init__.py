@@ -1,121 +1,170 @@
-__author__ = 'Matt Croydon, Mikhail Korobov, Pawel Tomasiewicz, Petr Dlouhy'
-__version__ = (0, 7, 0)
-
 import warnings
+from datetime import datetime
 from functools import partial
-from dateutil.relativedelta import relativedelta
-from dateutil.parser import parse
 
+from django.db import transaction
 from django.db.models import Count
-from django.db import DatabaseError, transaction
 from django.db.models.functions import Trunc
-from django.conf import settings
+from django.utils import timezone
 
-from qsstats.utils import get_bounds, _to_datetime, _parse_interval, _remove_time
-from qsstats import compat
-from qsstats.exceptions import *
-from datetime import date, datetime
+from dateutil.parser import parse
+from dateutil.relativedelta import relativedelta
 from six import string_types
 
-class QuerySetStats(object):
+from qsstats import exceptions
+from qsstats import utils
+from qsstats.exceptions import DateFieldMissingError
+from qsstats.exceptions import InvalidIntervalError
+from qsstats.exceptions import InvalidOperatorError
+from qsstats.exceptions import QuerySetMissingError
+
+# Deprecated exception aliases (see qsstats.exceptions), resolved lazily so
+# that accessing e.g. qsstats.DateFieldMissing warns, without warning for
+# everyone who merely imports this package.
+# TODO: remove in the next major release.
+_DEPRECATED_EXCEPTION_ALIASES = frozenset(
+    {"InvalidInterval", "InvalidOperator", "DateFieldMissing", "QuerySetMissing"},
+)
+
+
+def __getattr__(name):
+    if name in _DEPRECATED_EXCEPTION_ALIASES:
+        return getattr(exceptions, name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
+class QuerySetStats:
     """
     Generates statistics about a queryset using Django aggregates.  QuerySetStats
     is able to handle snapshots of data (for example this day, week, month, or
     year) or generate time series data suitable for graphing.
     """
+
     def __init__(self, qs=None, date_field=None, aggregate=None, today=None):
         self.qs = qs
         self.date_field = date_field
-        self.aggregate = aggregate or Count('id', distinct=True)
+        self.aggregate = aggregate or Count("id", distinct=True)
         self.today = today or self.update_today()
 
     # Aggregates for a specific period of time
 
     def for_interval(self, interval, dt, date_field=None, aggregate=None):
-        start, end = get_bounds(dt, interval)
+        start, end = utils.get_bounds(dt, interval)
         date_field = date_field or self.date_field
-        kwargs = {'%s__range' % date_field : (start, end)}
+        kwargs = {f"{date_field}__range": (start, end)}
         return self._aggregate(date_field, aggregate, kwargs)
 
     def this_interval(self, interval, date_field=None, aggregate=None):
-        method = getattr(self, 'for_%s' % interval)
+        method = getattr(self, f"for_{interval}")
         return method(self.today, date_field, aggregate)
 
     # support for this_* and for_* methods
     def __getattr__(self, name):
-        if name.startswith('for_'):
+        if name.startswith("for_"):
             return partial(self.for_interval, name[4:])
-        if name.startswith('this_'):
+        if name.startswith("this_"):
             return partial(self.this_interval, name[5:])
         raise AttributeError
 
-    def time_series(self, start, end=None, interval='days',
-                    date_field=None, aggregate=None, engine=None):
-        ''' Aggregate over time intervals '''
+    def time_series(  # noqa: PLR0917, PLR0913
+        self,
+        start,
+        end=None,
+        interval="days",
+        date_field=None,
+        aggregate=None,
+        engine=None,
+    ):
+        """Aggregate over time intervals"""
 
         end = end or self.today
         args = [start, end, interval, date_field, aggregate]
         sid = transaction.savepoint()
         try:
             return self._fast_time_series(*args)
-        except (ValueError):
+        except ValueError:
             transaction.savepoint_rollback(sid)
-            warnings.warn("Your database doesn't support timezones. Switching to slower QSStats queries.")
+            warnings.warn(
+                "Your database doesn't support timezones. Switching to slower QSStats queries.",  # noqa: E501
+                stacklevel=2,
+            )
             return self._slow_time_series(*args)
 
-    def _slow_time_series(self, start, end, interval='days',
-                          date_field=None, aggregate=None):
-        ''' Aggregate over time intervals using 1 sql query for one interval '''
+    def _slow_time_series(
+        self,
+        start,
+        end,
+        interval="days",
+        date_field=None,
+        aggregate=None,
+    ):
+        """Aggregate over time intervals using 1 sql query for one interval"""
 
-        num, interval = _parse_interval(interval)
+        num, interval = utils._parse_interval(interval)  # noqa: SLF001
 
-        if interval not in ['minutes', 'hours',
-                            'days', 'weeks',
-                            'months', 'years'] or num != 1:
-            raise InvalidInterval('Interval is currently not supported.')
+        if (
+            interval not in ["minutes", "hours", "days", "weeks", "months", "years"]
+            or num != 1
+        ):
+            msg = "Interval is currently not supported."
+            raise InvalidIntervalError(msg)
 
-        method = getattr(self, 'for_%s' % interval[:-1])
+        method = getattr(self, f"for_{interval[:-1]}")
 
         stat_list = []
-        dt, end = _to_datetime(start), _to_datetime(end)
+        dt, end = utils._to_datetime(start), utils._to_datetime(end)  # noqa: SLF001
         while dt <= end:
             value = method(dt, date_field, aggregate)
-            stat_list.append((dt, value,))
-            dt = dt + relativedelta(**{interval : 1})
+            stat_list.append((dt, value))
+            dt = dt + relativedelta(**{interval: 1})
         return stat_list
 
-    def _fast_time_series(self, start, end, interval='days',
-                          date_field=None, aggregate=None):
-        ''' Aggregate over time intervals using just 1 sql query '''
+    def _fast_time_series(
+        self,
+        start,
+        end,
+        interval="days",
+        date_field=None,
+        aggregate=None,
+    ):
+        """Aggregate over time intervals using just 1 sql query"""
 
         date_field = date_field or self.date_field
         aggregate = aggregate or self.aggregate
 
-        num, interval = _parse_interval(interval)
+        num, interval = utils._parse_interval(interval)  # noqa: SLF001
 
-        interval_s = interval.rstrip('s')
-        start, _ = get_bounds(start, interval_s)
-        _, end = get_bounds(end, interval_s)
+        interval_s = interval.rstrip("s")
+        start, _ = utils.get_bounds(start, interval_s)
+        _, end = utils.get_bounds(end, interval_s)
 
-        kwargs = {'%s__range' % date_field : (start, end)}
+        kwargs = {f"{date_field}__range": (start, end)}
 
         #  TODO: maybe we could use the tzinfo for the user's location
-        aggregate_data = self.qs.\
-                        filter(**kwargs).\
-                        annotate(d=Trunc(date_field, interval_s, tzinfo=start.tzinfo)).\
-                        order_by().values('d').\
-                        annotate(agg=aggregate)
+        aggregate_data = (
+            self.qs.filter(**kwargs)
+            .annotate(d=Trunc(date_field, interval_s, tzinfo=start.tzinfo))
+            .order_by()
+            .values("d")
+            .annotate(agg=aggregate)
+        )
 
-        today = _remove_time(compat.now())
+        today = utils._remove_time(timezone.now())  # noqa: SLF001
+
         def to_dt(d):
             if isinstance(d, string_types):
                 return parse(d, yearfirst=True, default=today)
             if type(d).__name__ == "date":
-                d = datetime(year=d.year, month=d.month, day=d.day, tzinfo=start.tzinfo)
-                return d
+                return datetime(
+                    year=d.year,
+                    month=d.month,
+                    day=d.day,
+                    tzinfo=start.tzinfo,
+                )
             return d
 
-        data = dict((to_dt(item['d']), item['agg']) for item in aggregate_data)
+        data = {to_dt(item["d"]): item["agg"] for item in aggregate_data}
 
         stat_list = []
         dt = start
@@ -125,51 +174,54 @@ class QuerySetStats(object):
             for i in range(num):
                 value = value + data.get(dt, 0)
                 if i == 0:
-                    stat_list.append((dt, value,))
+                    stat_list.append((dt, value))
                     idx = len(stat_list) - 1
                 elif i == num - 1:
-                    stat_list[idx] = (dt, value,)
-                dt = dt + relativedelta(**{interval : 1})
+                    stat_list[idx] = (dt, value)
+                dt = dt + relativedelta(**{interval: 1})
 
         return stat_list
 
     # Aggregate totals using a date or datetime as a pivot
 
     def until(self, dt, date_field=None, aggregate=None):
-        return self.pivot(dt, 'lte', date_field, aggregate)
+        return self.pivot(dt, "lte", date_field, aggregate)
 
     def until_now(self, date_field=None, aggregate=None):
-        return self.pivot(compat.now(), 'lte', date_field, aggregate)
+        return self.pivot(timezone.now(), "lte", date_field, aggregate)
 
     def after(self, dt, date_field=None, aggregate=None):
-        return self.pivot(dt, 'gte', date_field, aggregate)
+        return self.pivot(dt, "gte", date_field, aggregate)
 
     def after_now(self, date_field=None, aggregate=None):
-        return self.pivot(compat.now(), 'gte', date_field, aggregate)
+        return self.pivot(timezone.now(), "gte", date_field, aggregate)
 
     def pivot(self, dt, operator=None, date_field=None, aggregate=None):
         operator = operator or self.operator
-        if operator not in ['lt', 'lte', 'gt', 'gte']:
-            raise InvalidOperator("Please provide a valid operator.")
+        if operator not in ["lt", "lte", "gt", "gte"]:
+            msg = "Please provide a valid operator."
+            raise InvalidOperatorError(msg)
 
-        kwargs = {'%s__%s' % (date_field or self.date_field, operator) : dt}
+        kwargs = {f"{date_field or self.date_field}__{operator}": dt}
         return self._aggregate(date_field, aggregate, kwargs)
 
     # Utility functions
     def update_today(self):
-        _now = compat.now()
-        self.today = _remove_time(_now)
+        _now = timezone.now()
+        self.today = utils._remove_time(_now)  # noqa: SLF001
         return self.today
 
-    def _aggregate(self, date_field=None, aggregate=None, filter=None):
+    def _aggregate(self, date_field=None, aggregate=None, filter_kwargs=None):
         date_field = date_field or self.date_field
         aggregate = aggregate or self.aggregate
 
         if not date_field:
-            raise DateFieldMissing("Please provide a date_field.")
+            msg = "Please provide a date_field."
+            raise DateFieldMissingError(msg)
 
         if self.qs is None:
-            raise QuerySetMissing("Please provide a queryset.")
+            msg = "Please provide a queryset."
+            raise QuerySetMissingError(msg)
 
-        agg = self.qs.filter(**filter).aggregate(agg=aggregate)
-        return agg['agg']
+        agg = self.qs.filter(**filter_kwargs).aggregate(agg=aggregate)
+        return agg["agg"]
