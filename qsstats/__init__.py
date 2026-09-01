@@ -2,8 +2,10 @@ import warnings
 from datetime import datetime
 from functools import partial
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db import transaction
 from django.db.models import Count
+from django.db.models import DateTimeField
 from django.db.models.functions import Trunc
 from django.utils import timezone
 
@@ -141,10 +143,23 @@ class QuerySetStats:
 
         kwargs = {f"{date_field}__range": (start, end)}
 
+        # Trunc() unconditionally raises ValueError("tzinfo can only be used
+        # with DateTimeField.") if tzinfo is passed for a plain DateField -
+        # and a DateField has no timezone component to convert anyway. Only
+        # pass tzinfo when date_field actually resolves to a DateTimeField,
+        # so the fast path doesn't needlessly fall back to _slow_time_series.
         #  TODO: maybe we could use the tzinfo for the user's location
+        trunc_kwargs = {}
+        try:
+            model_field = self.qs.model._meta.get_field(date_field)  # noqa: SLF001
+        except (FieldDoesNotExist, AttributeError):
+            model_field = None
+        if isinstance(model_field, DateTimeField):
+            trunc_kwargs["tzinfo"] = start.tzinfo
+
         aggregate_data = (
             self.qs.filter(**kwargs)
-            .annotate(d=Trunc(date_field, interval_s, tzinfo=start.tzinfo))
+            .annotate(d=Trunc(date_field, interval_s, **trunc_kwargs))
             .order_by()
             .values("d")
             .annotate(agg=aggregate)
