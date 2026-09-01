@@ -40,7 +40,7 @@ def get_bounds(
 ) -> tuple[datetime.datetime, datetime.datetime]:
     """Returns interval bounds the datetime is in."""
 
-    day = _to_datetime(_remove_time(dt))
+    day = _remove_time(dt)
     dt = _to_datetime(dt)
 
     if interval == "minute":

@@ -6,7 +6,6 @@ from django.utils import timezone
 
 import pytest
 
-import qsstats
 from qsstats import DateFieldMissingError
 from qsstats import InvalidIntervalError
 from qsstats import InvalidOperatorError
@@ -65,6 +64,29 @@ class QuerySetStatsTestCase(TestCase):
         qss = QuerySetStats(User.objects.filter(is_active=True), "date_joined")
         qss.time_series(day - datetime.timedelta(days=30), day, interval="weeks")
 
+    def test_time_series_multi_unit_bucket_labels(self):
+        # Each bucket's label must be its own start, not drift forward by
+        # (num - 1) units - e.g. a "2days" bucket covering day0-1 must be
+        # labeled day0, not day1.
+        start = utils._remove_time(timezone.now())  # noqa: SLF001
+        for i in range(5):
+            u = User.objects.create_user(f"m{i}", f"m{i}@example.com")
+            u.date_joined = start + datetime.timedelta(days=i)
+            u.save()
+
+        qss = QuerySetStats(
+            User.objects.filter(username__startswith="m"),
+            "date_joined",
+        )
+        end = start + datetime.timedelta(days=4)
+
+        result = qss.time_series(start, end, interval="2days")
+        assert result == [
+            (start, 2),
+            (start + datetime.timedelta(days=2), 2),
+            (start + datetime.timedelta(days=4), 1),
+        ]
+
     def test_until(self):
         now = timezone.now()
         today = utils._remove_time(now)  # noqa: SLF001
@@ -94,6 +116,17 @@ class QuerySetStatsTestCase(TestCase):
         assert qss.after(today) == 1
         assert qss.after(tomorrow) == 0
         assert qss.after_now() == 0
+
+    def test_attribute_error_has_name(self):
+        # A missing attribute (not a for_*/this_* method) should raise a
+        # normal, informative AttributeError - not a bare, message-less one.
+        qss = QuerySetStats()
+
+        with pytest.raises(AttributeError, match="bogus_attr") as exc_info:
+            qss.bogus_attr  # noqa: B018
+
+        assert exc_info.value.name == "bogus_attr"
+        assert exc_info.value.obj is qss
 
     # TODO: aggregate_field tests
 
@@ -135,16 +168,3 @@ class QuerySetStatsTestCase(TestCase):
 
         with pytest.raises(InvalidOperatorError):
             qss.pivot(qss.today, operator="monkeys")
-
-    def test_deprecated_exception_aliases(self):
-        # The pre-1.2 exception names still resolve to the new Error-suffixed
-        # classes, but accessing them now warns.
-        aliases = {
-            "InvalidInterval": InvalidIntervalError,
-            "InvalidOperator": InvalidOperatorError,
-            "DateFieldMissing": DateFieldMissingError,
-            "QuerySetMissing": QuerySetMissingError,
-        }
-        for old_name, new_class in aliases.items():
-            with pytest.warns(DeprecationWarning, match=old_name):
-                assert getattr(qsstats, old_name) is new_class

@@ -1,10 +1,8 @@
 import datetime
-import warnings
 from functools import partial
 from typing import Any
 
 from django.core.exceptions import FieldDoesNotExist
-from django.db import transaction
 from django.db.models import Aggregate
 from django.db.models import Count
 from django.db.models import DateTimeField
@@ -15,27 +13,19 @@ from django.utils import timezone
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 
-from qsstats import exceptions
 from qsstats import utils
 from qsstats.exceptions import DateFieldMissingError
 from qsstats.exceptions import InvalidIntervalError
 from qsstats.exceptions import InvalidOperatorError
 from qsstats.exceptions import QuerySetMissingError
 
-# Deprecated exception aliases (see qsstats.exceptions), resolved lazily so
-# that accessing e.g. qsstats.DateFieldMissing warns, without warning for
-# everyone who merely imports this package.
-# TODO: remove in the next major release.
-_DEPRECATED_EXCEPTION_ALIASES = frozenset(
-    {"InvalidInterval", "InvalidOperator", "DateFieldMissing", "QuerySetMissing"},
-)
-
-
-def __getattr__(name):
-    if name in _DEPRECATED_EXCEPTION_ALIASES:
-        return getattr(exceptions, name)
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)
+__all__ = [
+    "DateFieldMissingError",
+    "InvalidIntervalError",
+    "InvalidOperatorError",
+    "QuerySetMissingError",
+    "QuerySetStats",
+]
 
 
 class QuerySetStats:
@@ -88,7 +78,8 @@ class QuerySetStats:
             return partial(self.for_interval, name[4:])
         if name.startswith("this_"):
             return partial(self.this_interval, name[5:])
-        raise AttributeError
+        msg = f"{type(self).__name__!r} object has no attribute {name!r}"
+        raise AttributeError(msg, name=name, obj=self)
 
     def time_series(  # noqa: PLR0913, PLR0917
         self,
@@ -99,61 +90,9 @@ class QuerySetStats:
         aggregate: Aggregate | None = None,
         engine=None,
     ) -> list[tuple[datetime.datetime, int]]:
-        """Aggregate over time intervals"""
-
-        end = end or self.today
-        sid = transaction.savepoint()
-        try:
-            return self._fast_time_series(start, end, interval, date_field, aggregate)
-        except ValueError:
-            transaction.savepoint_rollback(sid)
-            warnings.warn(
-                "Your database doesn't support timezones. Switching to slower QSStats queries.",  # noqa: E501
-                stacklevel=2,
-            )
-            return self._slow_time_series(start, end, interval, date_field, aggregate)
-
-    def _slow_time_series(
-        self,
-        start: datetime.datetime | datetime.date,
-        end: datetime.datetime | datetime.date,
-        interval: str = "days",
-        date_field: str | None = None,
-        aggregate: Aggregate | None = None,
-    ) -> list[tuple[datetime.datetime, int]]:
-        """Aggregate over time intervals using 1 sql query for one interval"""
-
-        num, interval = utils._parse_interval(interval)  # noqa: SLF001
-
-        if (
-            interval not in ["minutes", "hours", "days", "weeks", "months", "years"]
-            or num != 1
-        ):
-            msg = "Interval is currently not supported."
-            raise InvalidIntervalError(msg)
-
-        interval_s = interval.rstrip("s")
-        method = getattr(self, f"for_{interval_s}")
-
-        stat_list = []
-        dt, _ = utils.get_bounds(start, interval_s)
-        _, end = utils.get_bounds(end, interval_s)
-        while dt <= end:
-            value = method(dt, date_field, aggregate)
-            stat_list.append((dt, value))
-            dt = dt + relativedelta(**{interval: 1})
-        return stat_list
-
-    def _fast_time_series(  # noqa: C901
-        self,
-        start: datetime.datetime | datetime.date,
-        end: datetime.datetime | datetime.date,
-        interval: str = "days",
-        date_field: str | None = None,
-        aggregate: Aggregate | None = None,
-    ) -> list[tuple[datetime.datetime, int]]:
         """Aggregate over time intervals using just 1 sql query"""
 
+        end = end or self.today
         date_field = date_field or self.date_field
         aggregate = aggregate or self.aggregate
 
@@ -176,8 +115,7 @@ class QuerySetStats:
         # Trunc() unconditionally raises ValueError("tzinfo can only be used
         # with DateTimeField.") if tzinfo is passed for a plain DateField -
         # and a DateField has no timezone component to convert anyway. Only
-        # pass tzinfo when date_field actually resolves to a DateTimeField,
-        # so the fast path doesn't needlessly fall back to _slow_time_series.
+        # pass tzinfo when date_field actually resolves to a DateTimeField.
         #  TODO: maybe we could use the tzinfo for the user's location
         trunc_kwargs: dict[str, Any] = {}
         try:
@@ -216,16 +154,12 @@ class QuerySetStats:
         stat_list = []
         dt = start
         while dt < end:
-            idx = 0
+            bucket_start = dt
             value = 0
-            for i in range(num):
+            for _ in range(num):
                 value = value + (data.get(dt) or 0)
-                if i == 0:
-                    stat_list.append((dt, value))
-                    idx = len(stat_list) - 1
-                elif i == num - 1:
-                    stat_list[idx] = (dt, value)
                 dt = dt + relativedelta(**{interval: 1})
+            stat_list.append((bucket_start, value))
 
         return stat_list
 
@@ -278,8 +212,7 @@ class QuerySetStats:
 
     # Utility functions
     def update_today(self) -> datetime.datetime:
-        _now = timezone.now()
-        self.today = utils._remove_time(_now)  # noqa: SLF001
+        self.today = utils._remove_time(timezone.now())  # noqa: SLF001
         return self.today
 
     def _aggregate(
