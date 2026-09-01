@@ -62,7 +62,9 @@ def get_bounds(dt, interval):
         begin = datetime.datetime(dt.year, 1, 1, tzinfo=dt.tzinfo)
         end = datetime.datetime(dt.year + 1, 1, 1, tzinfo=dt.tzinfo)
     else:
-        msg = "Interval not supported."
-        raise InvalidIntervalError(msg)
+        msg = f"Interval ({interval}) not supported."
+        raise InvalidIntervalError(
+            msg,
+        )
     end = end - relativedelta(microseconds=1)
     return begin, end
