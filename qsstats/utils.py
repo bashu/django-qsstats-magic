@@ -9,18 +9,22 @@ from dateutil.relativedelta import relativedelta
 from qsstats.exceptions import InvalidIntervalError
 
 
-def _remove_time(dt):
+def _remove_time(
+    dt: datetime.datetime | datetime.date,
+) -> datetime.datetime:
     tzinfo = getattr(dt, "tzinfo", timezone.now().tzinfo)
     return datetime.datetime(dt.year, dt.month, dt.day, tzinfo=tzinfo)
 
 
-def _to_datetime(dt):
+def _to_datetime(
+    dt: datetime.datetime | datetime.date,
+) -> datetime.datetime:
     if isinstance(dt, datetime.datetime):
         return dt
     return _remove_time(dt)
 
 
-def _parse_interval(interval):
+def _parse_interval(interval: str) -> tuple[int, str]:
     num = 1
     match = re.match(r"(\d+)([A-Za-z]+)", interval)
 
@@ -30,10 +34,13 @@ def _parse_interval(interval):
     return num, interval
 
 
-def get_bounds(dt, interval):
+def get_bounds(
+    dt: datetime.datetime | datetime.date,
+    interval: str,
+) -> tuple[datetime.datetime, datetime.datetime]:
     """Returns interval bounds the datetime is in."""
 
-    day = _to_datetime(_remove_time(dt))
+    day = _remove_time(dt)
     dt = _to_datetime(dt)
 
     if interval == "minute":
@@ -62,7 +69,10 @@ def get_bounds(dt, interval):
         begin = datetime.datetime(dt.year, 1, 1, tzinfo=dt.tzinfo)
         end = datetime.datetime(dt.year + 1, 1, 1, tzinfo=dt.tzinfo)
     else:
-        msg = "Interval not supported."
-        raise InvalidIntervalError(msg)
+        msg = f"Interval ({interval}) not supported."
+        raise InvalidIntervalError(
+            msg,
+        )
     end = end - relativedelta(microseconds=1)
+
     return begin, end

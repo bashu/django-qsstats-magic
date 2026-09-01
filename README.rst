@@ -18,7 +18,8 @@ repetitive tasks such as generating aggregate statistics of querysets
 over time easier.  It's probably overkill for the task at hand, but yay
 microframeworks!
 
-django-qsstats-magic is a refactoring of django-qsstats app with slightly
+django-qsstats-magic is a refactoring of `django-qsstats
+<https://github.com/mcroydon/django-qsstats>`_ app with slightly
 changed API, simplified internals and faster time_series implementation.
 
 Maintained by `Basil Shubin <https://github.com/bashu/>`_, and some great
@@ -48,11 +49,11 @@ How many users signed up today? this month? this year?
     qs = User.objects.all()
     qss = qsstats.QuerySetStats(qs, 'date_joined')
 
-    print '%s new accounts today.' % qss.this_day()
-    print '%s new accounts this week.' % qss.this_week()
-    print '%s new accounts this month.' % qss.this_month()
-    print '%s new accounts this year.' % qss.this_year()
-    print '%s new accounts until now.' % qss.until_now()
+    print('%s new accounts today.' % qss.this_day())
+    print('%s new accounts this week.' % qss.this_week())
+    print('%s new accounts this month.' % qss.this_month())
+    print('%s new accounts this year.' % qss.this_year())
+    print('%s new accounts until now.' % qss.until_now())
 
 This might print something like::
 
@@ -77,7 +78,7 @@ Aggregating time-series data suitable for graphing
     seven_days_ago = today - datetime.timedelta(days=7)
 
     time_series = qss.time_series(seven_days_ago, today)
-    print 'New users in the last 7 days: %s' % [t[1] for t in time_series]
+    print('New users in the last 7 days: %s' % [t[1] for t in time_series])
 
 This might print something like::
 
@@ -230,17 +231,17 @@ time-series data which may be extremely useful in plotting data:
 Testing
 -------
 
-If you'd like to test ``django-qsstats-magic`` against your local configuration, add
-``qsstats`` to your ``INSTALLED_APPS`` and run ``./manage.py test qsstats``.
-The test suite assumes that ``django.contrib.auth`` is installed.
+The test suite uses `pytest <https://pytest.org/>`_ and
+`pytest-django <https://pytest-django.readthedocs.io/>`_, and runs entirely
+against an in-memory SQLite database - no external database setup is
+required::
 
-For testing against different python, DB and django versions install tox
-(pip install tox) and run 'tox' from the source checkout::
+    $ uv run --group dev pytest
+
+For testing against the full matrix of supported Python and Django versions,
+install tox (``pip install tox``) and run ``tox`` from the source checkout::
 
     $ tox
-
-Db user 'qsstats_test' with password 'qsstats_test' and a DB 'qsstats_test'
-should exist.
 
 Difference from django-qsstats
 ------------------------------
