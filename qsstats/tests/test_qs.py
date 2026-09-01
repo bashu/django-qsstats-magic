@@ -117,6 +117,25 @@ class QuerySetStatsTestCase(TestCase):
         with pytest.raises(InvalidIntervalError):
             qss.time_series(qss.today, qss.today, interval="monkeys")
 
+    def test_pivot_default_operator(self):
+        # pivot() without an explicit operator falls back to self.operator,
+        # which defaults to 'lte' (see README's documented default).
+        now = timezone.now()
+        today = utils._remove_time(now)  # noqa: SLF001
+
+        self.user.date_joined = today
+        self.user.save()
+
+        qss = QuerySetStats(User.objects.filter(is_active=True), "date_joined")
+
+        assert qss.pivot(now) == 1
+
+    def test_invalid_operator(self):
+        qss = QuerySetStats(User.objects.filter(is_active=True), "date_joined")
+
+        with pytest.raises(InvalidOperatorError):
+            qss.pivot(qss.today, operator="monkeys")
+
     def test_deprecated_exception_aliases(self):
         # The pre-1.2 exception names still resolve to the new Error-suffixed
         # classes, but accessing them now warns.

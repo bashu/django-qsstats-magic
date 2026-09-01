@@ -14,7 +14,6 @@ from django.utils import timezone
 
 from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
-from six import string_types
 
 from qsstats import exceptions
 from qsstats import utils
@@ -51,11 +50,13 @@ class QuerySetStats:
         qs: QuerySet | None = None,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
+        operator: str | None = None,
         today: datetime.datetime | None = None,
     ):
         self.qs = qs
         self.date_field = date_field
         self.aggregate = aggregate or Count("id", distinct=True)
+        self.operator = operator or "lte"
         self.today = today or self.update_today()
 
     # Aggregates for a specific period of time
@@ -101,17 +102,16 @@ class QuerySetStats:
         """Aggregate over time intervals"""
 
         end = end or self.today
-        args = [start, end, interval, date_field, aggregate]
         sid = transaction.savepoint()
         try:
-            return self._fast_time_series(*args)
+            return self._fast_time_series(start, end, interval, date_field, aggregate)
         except ValueError:
             transaction.savepoint_rollback(sid)
             warnings.warn(
                 "Your database doesn't support timezones. Switching to slower QSStats queries.",  # noqa: E501
                 stacklevel=2,
             )
-            return self._slow_time_series(*args)
+            return self._slow_time_series(start, end, interval, date_field, aggregate)
 
     def _slow_time_series(
         self,
@@ -142,7 +142,7 @@ class QuerySetStats:
             dt = dt + relativedelta(**{interval: 1})
         return stat_list
 
-    def _fast_time_series(
+    def _fast_time_series(  # noqa: C901
         self,
         start: datetime.datetime | datetime.date,
         end: datetime.datetime | datetime.date,
@@ -154,6 +154,14 @@ class QuerySetStats:
 
         date_field = date_field or self.date_field
         aggregate = aggregate or self.aggregate
+
+        if not date_field:
+            msg = "Please provide a date_field."
+            raise DateFieldMissingError(msg)
+
+        if self.qs is None:
+            msg = "Please provide a queryset."
+            raise QuerySetMissingError(msg)
 
         num, interval = utils._parse_interval(interval)  # noqa: SLF001
 
@@ -169,7 +177,7 @@ class QuerySetStats:
         # pass tzinfo when date_field actually resolves to a DateTimeField,
         # so the fast path doesn't needlessly fall back to _slow_time_series.
         #  TODO: maybe we could use the tzinfo for the user's location
-        trunc_kwargs = {}
+        trunc_kwargs: dict[str, Any] = {}
         try:
             model_field = self.qs.model._meta.get_field(date_field)  # noqa: SLF001
         except (FieldDoesNotExist, AttributeError):
@@ -190,16 +198,16 @@ class QuerySetStats:
         def to_dt(
             d: datetime.datetime | datetime.date | str,
         ) -> datetime.datetime:
-            if isinstance(d, string_types):
+            if isinstance(d, str):
                 return parse(d, yearfirst=True, default=today)
-            if type(d).__name__ == "date":
-                return datetime.datetime(
-                    year=d.year,
-                    month=d.month,
-                    day=d.day,
-                    tzinfo=start.tzinfo,
-                )
-            return d
+            if isinstance(d, datetime.datetime):
+                return d
+            return datetime.datetime(
+                year=d.year,
+                month=d.month,
+                day=d.day,
+                tzinfo=start.tzinfo,
+            )
 
         data = {to_dt(item["d"]): item["agg"] for item in aggregate_data}
 
@@ -254,7 +262,7 @@ class QuerySetStats:
     def pivot(
         self,
         dt: datetime.datetime | datetime.date,
-        operator=None,
+        operator: str | None = None,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
     ) -> Any | None:
@@ -289,5 +297,5 @@ class QuerySetStats:
             msg = "Please provide a queryset."
             raise QuerySetMissingError(msg)
 
-        agg = self.qs.filter(**filter_kwargs).aggregate(agg=aggregate)
+        agg = self.qs.filter(**(filter_kwargs or {})).aggregate(agg=aggregate)
         return agg["agg"]
