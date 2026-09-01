@@ -1,8 +1,8 @@
 Changes
 -------
 
-1.2.0 (WIP)
-~~~~~~~~~~~
+2.0.0 (2026-09-01)
+~~~~~~~~~~~~~~~~~~
 
 * **Backwards incompatible**: removed the deprecated ``InvalidInterval``,
   ``InvalidOperator``, ``DateFieldMissing`` and ``QuerySetMissing`` exception
