@@ -132,10 +132,12 @@ class QuerySetStats:
             msg = "Interval is currently not supported."
             raise InvalidIntervalError(msg)
 
-        method = getattr(self, f"for_{interval[:-1]}")
+        interval_s = interval.rstrip("s")
+        method = getattr(self, f"for_{interval_s}")
 
         stat_list = []
-        dt, end = utils._to_datetime(start), utils._to_datetime(end)  # noqa: SLF001
+        dt, _ = utils.get_bounds(start, interval_s)
+        _, end = utils.get_bounds(end, interval_s)
         while dt <= end:
             value = method(dt, date_field, aggregate)
             stat_list.append((dt, value))
