@@ -217,7 +217,7 @@ class QuerySetStats:
             idx = 0
             value = 0
             for i in range(num):
-                value = value + data.get(dt, 0)
+                value = value + (data.get(dt) or 0)
                 if i == 0:
                     stat_list.append((dt, value))
                     idx = len(stat_list) - 1
