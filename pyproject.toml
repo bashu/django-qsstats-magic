@@ -161,6 +161,6 @@ ini_options.addopts = [ "--ds=qsstats.tests.settings", "--reuse-db", "--import-m
 
 # ==== Coverage ====
 [tool.coverage]
+run.source = [ "qsstats" ]
 run.omit = [ "*/migrations/*", "*/tests/*" ]
 run.relative_files = true
-run.source = [ "qsstats" ]
