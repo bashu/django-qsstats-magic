@@ -19,11 +19,6 @@ from qsstats.exceptions import InvalidIntervalError
 from qsstats.exceptions import InvalidOperatorError
 from qsstats.exceptions import QuerySetMissingError
 
-try:
-    basestring  # noqa: B018
-except NameError:
-    basestring = str
-
 __all__ = [
     "DateFieldMissingError",
     "InvalidIntervalError",
@@ -86,7 +81,7 @@ class QuerySetStats:
         msg = f"{type(self).__name__!r} object has no attribute {name!r}"
         raise AttributeError(msg, name=name, obj=self)
 
-    def time_series(  # noqa: PLR0913, PLR0917, C901
+    def time_series(  # noqa: PLR0913, PLR0917
         self,
         start: datetime.datetime | datetime.date,
         end: datetime.datetime | datetime.date | None = None,
@@ -143,12 +138,8 @@ class QuerySetStats:
         def to_dt(
             d: datetime.datetime | datetime.date | str,
         ) -> datetime.datetime:
-            try:
-                if isinstance(d, basestring):
-                    return parse(d, yearfirst=True, default=today)
-            except:  # noqa: E722
-                if isinstance(d, str):
-                    return parse(d, yearfirst=True, default=today)
+            if isinstance(d, str):
+                return parse(d, yearfirst=True, default=today)
             if isinstance(d, datetime.datetime):
                 return d
             return datetime.datetime(
