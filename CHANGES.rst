@@ -1,6 +1,13 @@
 Changes
 -------
 
+2.1.0 (2026-10-10)
+~~~~~~~~~~~~~~~~~~
+
+* Dropped Python 3.10 support. Python 3.11 is
+  now the minimum required version.
+* Added support for Python 3.15.
+
 2.0.0 (2026-09-01)
 ~~~~~~~~~~~~~~~~~~
 
