@@ -52,7 +52,7 @@ class QuerySetStatsTestCase(TestCase):
 
     def test_time_series_naive(self):
         self.assert_time_series_works(
-            datetime.datetime.now(tz=datetime.timezone.utc).date(),
+            datetime.datetime.now(tz=datetime.UTC).date(),
         )
 
     def test_time_series_weeks(self):
