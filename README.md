@@ -7,7 +7,7 @@
 | qsstats/\_\_init\_\_.py |      110 |        8 |     93% |100-101, 104-105, 123-124, 142, 145 |
 | qsstats/exceptions.py   |       11 |        0 |    100% |           |
 | qsstats/models.py       |        0 |        0 |    100% |           |
-| qsstats/utils.py        |       45 |        4 |     91% |47-55, 57-58 |
+| qsstats/utils.py        |       45 |        4 |     91% |47-55, 57-64 |
 | **TOTAL**               |  **166** |   **12** | **93%** |           |
 
 
