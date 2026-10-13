@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -31,14 +31,14 @@ class QuerySetStatsTestCase(TestCase):
         assert qss.this_day() == 1
 
     def assert_time_series_works(self, today):
-        seven_days_ago = today - datetime.timedelta(days=7)
+        seven_days_ago = today - dt.timedelta(days=7)
         for j in range(1, 8):
             for i in range(j):
                 u = User.objects.create_user(
                     f"p-{j}-{i}",
                     f"p{j}-{i}@example.com",
                 )
-                u.date_joined = today - datetime.timedelta(days=i)
+                u.date_joined = today - dt.timedelta(days=i)
                 u.save()
         qss = QuerySetStats(
             User.objects.filter(username__startswith="p"),
@@ -52,17 +52,17 @@ class QuerySetStatsTestCase(TestCase):
 
     def test_time_series_naive(self):
         self.assert_time_series_works(
-            datetime.datetime.now(tz=datetime.UTC).date(),
+            dt.datetime.now(tz=dt.UTC).date(),
         )
 
     def test_time_series_weeks(self):
-        day = datetime.date(year=2013, month=4, day=5)
+        day = dt.date(year=2013, month=4, day=5)
 
         self.user.date_joined = day
         self.user.save()
 
         qss = QuerySetStats(User.objects.filter(is_active=True), "date_joined")
-        qss.time_series(day - datetime.timedelta(days=30), day, interval="weeks")
+        qss.time_series(day - dt.timedelta(days=30), day, interval="weeks")
 
     def test_time_series_multi_unit_bucket_labels(self):
         # Each bucket's label must be its own start, not drift forward by
@@ -71,26 +71,26 @@ class QuerySetStatsTestCase(TestCase):
         start = utils._remove_time(timezone.now())  # noqa: SLF001
         for i in range(5):
             u = User.objects.create_user(f"m{i}", f"m{i}@example.com")
-            u.date_joined = start + datetime.timedelta(days=i)
+            u.date_joined = start + dt.timedelta(days=i)
             u.save()
 
         qss = QuerySetStats(
             User.objects.filter(username__startswith="m"),
             "date_joined",
         )
-        end = start + datetime.timedelta(days=4)
+        end = start + dt.timedelta(days=4)
 
         result = qss.time_series(start, end, interval="2days")
         assert result == [
             (start, 2),
-            (start + datetime.timedelta(days=2), 2),
-            (start + datetime.timedelta(days=4), 1),
+            (start + dt.timedelta(days=2), 2),
+            (start + dt.timedelta(days=4), 1),
         ]
 
     def test_until(self):
         now = timezone.now()
         today = utils._remove_time(now)  # noqa: SLF001
-        yesterday = today - datetime.timedelta(days=1)
+        yesterday = today - dt.timedelta(days=1)
 
         self.user.date_joined = today
         self.user.save()
@@ -105,7 +105,7 @@ class QuerySetStatsTestCase(TestCase):
     def test_after(self):
         now = timezone.now()
         today = utils._remove_time(now)  # noqa: SLF001
-        tomorrow = today + datetime.timedelta(days=1)
+        tomorrow = today + dt.timedelta(days=1)
 
         self.user.date_joined = today
         self.user.save()

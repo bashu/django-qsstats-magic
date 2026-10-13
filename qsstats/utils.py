@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import re
 
 from django.utils import timezone
@@ -10,18 +10,18 @@ from qsstats.exceptions import InvalidIntervalError
 
 
 def _remove_time(
-    dt: datetime.datetime | datetime.date,
-) -> datetime.datetime:
-    tzinfo = getattr(dt, "tzinfo", timezone.now().tzinfo)
-    return datetime.datetime(dt.year, dt.month, dt.day, tzinfo=tzinfo)
+    moment: dt.datetime | dt.date,
+) -> dt.datetime:
+    tzinfo = getattr(moment, "tzinfo", timezone.now().tzinfo)
+    return dt.datetime(moment.year, moment.month, moment.day, tzinfo=tzinfo)
 
 
 def _to_datetime(
-    dt: datetime.datetime | datetime.date,
-) -> datetime.datetime:
-    if isinstance(dt, datetime.datetime):
-        return dt
-    return _remove_time(dt)
+    moment: dt.datetime | dt.date,
+) -> dt.datetime:
+    if isinstance(moment, dt.datetime):
+        return moment
+    return _remove_time(moment)
 
 
 def _parse_interval(interval: str) -> tuple[int, str]:
@@ -35,39 +35,45 @@ def _parse_interval(interval: str) -> tuple[int, str]:
 
 
 def get_bounds(
-    dt: datetime.datetime | datetime.date,
+    moment: dt.datetime | dt.date,
     interval: str,
-) -> tuple[datetime.datetime, datetime.datetime]:
+) -> tuple[dt.datetime, dt.datetime]:
     """Returns interval bounds the datetime is in."""
 
-    day = _remove_time(dt)
-    dt = _to_datetime(dt)
+    day = _remove_time(moment)
+    moment = _to_datetime(moment)
 
     if interval == "minute":
-        begin = datetime.datetime(
-            dt.year,
-            dt.month,
-            dt.day,
-            dt.hour,
-            dt.minute,
-            tzinfo=dt.tzinfo,
+        begin = dt.datetime(
+            moment.year,
+            moment.month,
+            moment.day,
+            moment.hour,
+            moment.minute,
+            tzinfo=moment.tzinfo,
         )
         end = begin + relativedelta(minutes=1)
     elif interval == "hour":
-        begin = datetime.datetime(dt.year, dt.month, dt.day, dt.hour, tzinfo=dt.tzinfo)
+        begin = dt.datetime(
+            moment.year,
+            moment.month,
+            moment.day,
+            moment.hour,
+            tzinfo=moment.tzinfo,
+        )
         end = begin + relativedelta(hours=1)
     elif interval == "day":
         begin = day
         end = day + relativedelta(days=1)
     elif interval == "week":
         begin = day - relativedelta(weekday=MO(-1))
-        end = begin + datetime.timedelta(days=7)
+        end = begin + dt.timedelta(days=7)
     elif interval == "month":
-        begin = datetime.datetime(dt.year, dt.month, 1, tzinfo=dt.tzinfo)
+        begin = dt.datetime(moment.year, moment.month, 1, tzinfo=moment.tzinfo)
         end = begin + relativedelta(months=1)
     elif interval == "year":
-        begin = datetime.datetime(dt.year, 1, 1, tzinfo=dt.tzinfo)
-        end = datetime.datetime(dt.year + 1, 1, 1, tzinfo=dt.tzinfo)
+        begin = dt.datetime(moment.year, 1, 1, tzinfo=moment.tzinfo)
+        end = dt.datetime(moment.year + 1, 1, 1, tzinfo=moment.tzinfo)
     else:
         msg = f"Interval ({interval}) not supported."
         raise InvalidIntervalError(
