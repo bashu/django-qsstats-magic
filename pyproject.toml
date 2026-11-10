@@ -54,6 +54,7 @@ dev = [
 
 [tool.setuptools]
 packages.find.include = [ "qsstats*" ]
+packages.find.exclude = [ "qsstats.tests*" ]
 dynamic.readme = { file = [ "README.rst", "CHANGES.rst" ], content-type = "text/x-rst" }
 zip-safe = false
 
