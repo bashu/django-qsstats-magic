@@ -11,7 +11,6 @@ from django.db.models.functions import Trunc
 from django.utils import timezone
 
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta
 
 from qsstats import utils
 from qsstats.exceptions import DateFieldMissingError
@@ -158,7 +157,7 @@ class QuerySetStats:
             value = 0
             for _ in range(num):
                 value = value + (data.get(moment) or 0)
-                moment = moment + relativedelta(**{interval: 1})
+                moment = moment + utils.step(interval)
             stat_list.append((bucket_start, value))
 
         return stat_list

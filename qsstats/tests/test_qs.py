@@ -64,6 +64,34 @@ class QuerySetStatsTestCase(TestCase):
         qss = QuerySetStats(User.objects.filter(is_active=True), "date_joined")
         qss.time_series(day - dt.timedelta(days=30), day, interval="weeks")
 
+    def test_time_series_quarters(self):
+        year = 2013
+        quarter_starts = [
+            dt.date(year, 1, 1),
+            dt.date(year, 4, 1),
+            dt.date(year, 7, 1),
+            dt.date(year, 10, 1),
+        ]
+        for quarter, quarter_start in enumerate(quarter_starts, start=1):
+            for i in range(quarter):
+                u = User.objects.create_user(
+                    f"q{quarter}-{i}",
+                    f"q{quarter}-{i}@example.com",
+                )
+                u.date_joined = quarter_start
+                u.save()
+
+        qss = QuerySetStats(
+            User.objects.filter(username__startswith="q"),
+            "date_joined",
+        )
+        result = qss.time_series(
+            dt.date(year, 1, 1),
+            dt.date(year, 12, 31),
+            interval="quarters",
+        )
+        assert [value for _, value in result] == [1, 2, 3, 4]
+
     def test_time_series_multi_unit_bucket_labels(self):
         # Each bucket's label must be its own start, not drift forward by
         # (num - 1) units - e.g. a "2days" bucket covering day0-1 must be

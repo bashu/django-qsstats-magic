@@ -34,6 +34,17 @@ def _parse_interval(interval: str) -> tuple[int, str]:
     return num, interval
 
 
+def step(interval: str) -> relativedelta:
+    """A relativedelta() advancing by one pluralized `interval` unit.
+
+    relativedelta() has no `quarters` keyword, so that one needs mapping to
+    its equivalent in months.
+    """
+    if interval == "quarters":
+        return relativedelta(months=3)
+    return relativedelta(**{interval: 1})
+
+
 def get_bounds(
     moment: dt.datetime | dt.date,
     interval: str,
@@ -71,6 +82,14 @@ def get_bounds(
     elif interval == "month":
         begin = dt.datetime(moment.year, moment.month, 1, tzinfo=moment.tzinfo)
         end = begin + relativedelta(months=1)
+    elif interval == "quarter":
+        begin = dt.datetime(
+            moment.year,
+            ((moment.month - 1) // 3) * 3 + 1,
+            1,
+            tzinfo=moment.tzinfo,
+        )
+        end = begin + relativedelta(months=3)
     elif interval == "year":
         begin = dt.datetime(moment.year, 1, 1, tzinfo=moment.tzinfo)
         end = dt.datetime(moment.year + 1, 1, 1, tzinfo=moment.tzinfo)

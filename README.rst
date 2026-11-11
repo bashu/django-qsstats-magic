@@ -140,17 +140,19 @@ single aggregate result by using the following methods:
 * ``for_day``
 * ``for_week``
 * ``for_month``
+* ``for_quarter``
 * ``for_year``
 
     Positional arguments: ``dt``, a ``datetime.datetime`` or ``datetime.date``
     object to filter the queryset to this interval (minute, hour, day, week,
-    month or year).
+    month, quarter or year).
 
 * ``this_minute``
 * ``this_hour``
 * ``this_day``
 * ``this_week``
 * ``this_month``
+* ``this_quarter``
 * ``this_year``
 
     Wrappers around ``for_<interval>`` that uses ``dateutil.relativedelta`` to
@@ -168,8 +170,8 @@ time-series data which may be extremely useful in plotting data:
     ``aggregate`` keyword argument, ``time_series`` takes an optional
     ``interval`` keyword argument used to mark which interval to use while
     calculating aggregate data between ``start`` and ``end``.  This argument
-    defaults to ``'days'`` and can accept ``'years'``, ``'months'``,
-    ``'weeks'``, ``'days'``, ``'hours'`` or ``'minutes'``.
+    defaults to ``'days'`` and can accept ``'years'``, ``'quarters'``,
+    ``'months'``, ``'weeks'``, ``'days'``, ``'hours'`` or ``'minutes'``.
     It will raise ``InvalidIntervalError`` otherwise.
 
     This methods returns a list of tuples.  The first item in each
