@@ -1,6 +1,13 @@
 Changes
 -------
 
+2.2.0 (2026-11-11)
+~~~~~~~~~~~~~~~~~~
+
+* Added ``quarter`` as an interval: ``for_quarter``, ``this_quarter``, and
+  ``time_series(..., interval='quarters')``.
+* Excluded ``qsstats.tests`` from the built package.
+
 2.1.0 (2026-10-10)
 ~~~~~~~~~~~~~~~~~~
 

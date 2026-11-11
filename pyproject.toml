@@ -4,7 +4,7 @@ requires = [ "setuptools>=61" ]
 
 [project]
 name = "django-qsstats-magic"
-version = "2.1.0"
+version = "2.2.0"
 description = "A django microframework that eases the generation of aggregate data for querysets."
 license = "BSD-3-Clause"
 maintainers = [ { name = "Basil Shubin", email = "basil.shubin@gmail.com" } ]
@@ -41,19 +41,20 @@ urls.homepage = "https://github.com/bashu/django-qsstats-magic/"
 
 [dependency-groups]
 dev = [
-  "coverage==7.16.2",
+  "coverage==7.17.2",
   "django-stubs[compatible-mypy]==6.1.2",
   "django-upgrade==1.33.0",
-  "mypy==2.4.0",
-  "pre-commit==4.6.2",
-  "pytest==9.1.1",
+  "mypy==2.4.1",
+  "pre-commit==4.7.0",
+  "pytest==9.2.0",
   "pytest-django==4.14.0",
   "pytest-sugar==1.1.1",
-  "ruff==0.16.10",
+  "ruff==0.17.4",
 ]
 
 [tool.setuptools]
 packages.find.include = [ "qsstats*" ]
+packages.find.exclude = [ "qsstats.tests*" ]
 dynamic.readme = { file = [ "README.rst", "CHANGES.rst" ], content-type = "text/x-rst" }
 zip-safe = false
 

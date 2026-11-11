@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 from functools import partial
 from typing import Any
 
@@ -11,7 +11,6 @@ from django.db.models.functions import Trunc
 from django.utils import timezone
 
 from dateutil.parser import parse
-from dateutil.relativedelta import relativedelta
 
 from qsstats import utils
 from qsstats.exceptions import DateFieldMissingError
@@ -41,7 +40,7 @@ class QuerySetStats:
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
         operator: str | None = None,
-        today: datetime.datetime | None = None,
+        today: dt.datetime | None = None,
     ):
         self.qs = qs
         self.date_field = date_field
@@ -54,7 +53,7 @@ class QuerySetStats:
     def for_interval(
         self,
         interval: str,
-        dt: datetime.datetime | datetime.date,
+        dt: dt.datetime | dt.date,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
     ) -> Any | None:
@@ -83,13 +82,13 @@ class QuerySetStats:
 
     def time_series(  # noqa: PLR0913, PLR0917
         self,
-        start: datetime.datetime | datetime.date,
-        end: datetime.datetime | datetime.date | None = None,
+        start: dt.datetime | dt.date,
+        end: dt.datetime | dt.date | None = None,
         interval: str = "days",
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
         engine=None,
-    ) -> list[tuple[datetime.datetime, int]]:
+    ) -> list[tuple[dt.datetime, int]]:
         """Aggregate over time intervals using just 1 sql query"""
 
         end = end or self.today
@@ -136,13 +135,13 @@ class QuerySetStats:
         today = utils._remove_time(timezone.now())  # noqa: SLF001
 
         def to_dt(
-            d: datetime.datetime | datetime.date | str,
-        ) -> datetime.datetime:
+            d: dt.datetime | dt.date | str,
+        ) -> dt.datetime:
             if isinstance(d, str):
                 return parse(d, yearfirst=True, default=today)
-            if isinstance(d, datetime.datetime):
+            if isinstance(d, dt.datetime):
                 return d
-            return datetime.datetime(
+            return dt.datetime(
                 year=d.year,
                 month=d.month,
                 day=d.day,
@@ -152,13 +151,13 @@ class QuerySetStats:
         data = {to_dt(item["d"]): item["agg"] for item in aggregate_data}
 
         stat_list = []
-        dt = start
-        while dt < end:
-            bucket_start = dt
+        moment = start
+        while moment < end:
+            bucket_start = moment
             value = 0
             for _ in range(num):
-                value = value + (data.get(dt) or 0)
-                dt = dt + relativedelta(**{interval: 1})
+                value = value + (data.get(moment) or 0)
+                moment = moment + utils.step(interval)
             stat_list.append((bucket_start, value))
 
         return stat_list
@@ -167,7 +166,7 @@ class QuerySetStats:
 
     def until(
         self,
-        dt: datetime.datetime | datetime.date,
+        dt: dt.datetime | dt.date,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
     ) -> Any | None:
@@ -182,7 +181,7 @@ class QuerySetStats:
 
     def after(
         self,
-        dt: datetime.datetime | datetime.date,
+        dt: dt.datetime | dt.date,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
     ) -> Any | None:
@@ -197,7 +196,7 @@ class QuerySetStats:
 
     def pivot(
         self,
-        dt: datetime.datetime | datetime.date,
+        dt: dt.datetime | dt.date,
         operator: str | None = None,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
@@ -211,7 +210,7 @@ class QuerySetStats:
         return self._aggregate(date_field, aggregate, kwargs)
 
     # Utility functions
-    def update_today(self) -> datetime.datetime:
+    def update_today(self) -> dt.datetime:
         self.today = utils._remove_time(timezone.now())  # noqa: SLF001
         return self.today
 
