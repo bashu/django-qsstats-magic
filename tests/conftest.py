@@ -1,16 +1,19 @@
 import datetime as dt
+import zoneinfo
 from collections.abc import Callable
 from collections.abc import Iterable
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils import timezone
 
 import pytest
+from pytest_django.fixtures import Settings
 from time_machine import TimeMachineFixture
 
 from qsstats import QuerySetStats
 
-StatsFactory = Callable[[Iterable[dt.date]], QuerySetStats]
+QuerySetStatsFactory = Callable[[Iterable[dt.date]], QuerySetStats]
 
 FROZEN_MOMENT = dt.datetime(2026, 11, 14, 12, 0, tzinfo=dt.UTC)
 
@@ -27,13 +30,15 @@ def now() -> dt.datetime:
 
 
 def to_day_start(day: dt.date) -> dt.datetime:
-    """Midnight of ``day``, aware in UTC when ``USE_TZ`` is on, naive otherwise."""
-    return dt.datetime.combine(day, dt.time(), tzinfo=timezone.now().tzinfo)
+    """Local midnight of ``day``: aware when ``USE_TZ`` is on, naive otherwise."""
+    tzinfo = timezone.get_current_timezone() if settings.USE_TZ else None
+    return dt.datetime.combine(day, dt.time(), tzinfo=tzinfo)
 
 
 @pytest.fixture
 def today(now: dt.datetime) -> dt.datetime:
-    return to_day_start(now.date())
+    local_date = timezone.localdate(now) if settings.USE_TZ else now.date()
+    return to_day_start(local_date)
 
 
 @pytest.fixture
@@ -47,16 +52,39 @@ def inactive_user(db: None) -> User:
 
 
 @pytest.fixture
-def active_users_stats(active_user: User, inactive_user: User) -> QuerySetStats:
+def active_users_qss(active_user: User, inactive_user: User) -> QuerySetStats:
     """Stats over active users: counts ``active_user``, skips ``inactive_user``."""
     return QuerySetStats(User.objects.filter(is_active=True), "date_joined")
 
 
 @pytest.fixture
-def joined_users_stats_factory(db: None) -> StatsFactory:
-    """Create one user joined at midnight of each date; return stats over all users."""
+def localtime_user_qss(db: None, settings: Settings) -> QuerySetStats:
+    """Stats over one user who joined at 02:00 local time on the frozen day.
 
-    def create_joined_users_stats(join_dates: Iterable[dt.date]) -> QuerySetStats:
+    The project runs in Dubai (UTC+4), so that moment is still the previous
+    day in UTC: 22:00 on November 13.
+    """
+    settings.TIME_ZONE = "Asia/Dubai"
+    joined_at = dt.datetime(2026, 11, 14, 2, 0, tzinfo=zoneinfo.ZoneInfo("Asia/Dubai"))
+
+    # Without USE_TZ the database stores naive local time.
+    if not settings.USE_TZ:
+        joined_at = timezone.make_naive(joined_at)
+
+    User.objects.create_user(
+        "early-bird",
+        "early-bird@example.com",
+        date_joined=joined_at,
+    )
+
+    return QuerySetStats(User.objects.all(), "date_joined")
+
+
+@pytest.fixture
+def qss_for_date_joined_factory(db: None) -> QuerySetStatsFactory:
+    """Create one user joined at midnight of each date; return qss over all users."""
+
+    def create_qss_for_date_joined(join_dates: Iterable[dt.date]) -> QuerySetStats:
 
         for idx, join_date in enumerate(join_dates):
             User.objects.create_user(
@@ -67,4 +95,4 @@ def joined_users_stats_factory(db: None) -> StatsFactory:
 
         return QuerySetStats(User.objects.all(), "date_joined")
 
-    return create_joined_users_stats
+    return create_qss_for_date_joined

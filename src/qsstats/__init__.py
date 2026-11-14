@@ -70,7 +70,14 @@ class QuerySetStats:
         aggregate: Aggregate | None = None,
     ) -> Any | None:
         method = getattr(self, f"for_{interval}")
-        return method(self.today, date_field, aggregate)
+        # ``today`` is a date (midnight), so it cannot tell which hour or minute
+        # is the current one: those come from the clock.
+        moment = (
+            utils._get_local_now()  # noqa: SLF001
+            if interval in {"minute", "hour"}
+            else self.today
+        )
+        return method(moment, date_field, aggregate)
 
     # support for this_* and for_* methods
     def __getattr__(self, name: str) -> Callable[..., Any | None]:
@@ -133,7 +140,7 @@ class QuerySetStats:
             .annotate(agg=aggregate)
         )
 
-        today = utils._remove_time(timezone.now())  # noqa: SLF001
+        today = utils._remove_time(utils._get_local_now())  # noqa: SLF001
 
         def to_dt(
             truncated: dt.datetime | dt.date | str,
@@ -218,7 +225,7 @@ class QuerySetStats:
 
     # Utility functions
     def update_today(self) -> dt.datetime:
-        self.today = utils._remove_time(timezone.now())  # noqa: SLF001
+        self.today = utils._remove_time(utils._get_local_now())  # noqa: SLF001
         return self.today
 
     def _aggregate(

@@ -1,6 +1,36 @@
 Changes
 -------
 
+3.0.0 (2026-11-14)
+~~~~~~~~~~~~~~~~~~
+
+* **Backwards incompatible**: with ``USE_TZ = True``, intervals now follow
+  the current time zone (``TIME_ZONE``, or the one activated with
+  ``timezone.activate()``) instead of UTC. Projects with ``USE_TZ = False``
+  or ``TIME_ZONE = 'UTC'`` are not affected.
+
+  - Days, weeks, months, quarters and years start at local midnight. This
+    affects ``this_*()``, the default ``today``, and ``for_*()`` and
+    ``time_series()`` called with ``datetime.date`` values. Counts near
+    midnight move to the local day they belong to, so totals per day,
+    week, month, quarter or year can change.
+  - ``time_series()`` labels are aware datetimes in the local time zone
+    (e.g. ``2026-11-14 00:00+04:00``) rather than in UTC.
+  - Hourly and minutely series follow the local clock too. In zones with a
+    half-hour offset, such as ``Asia/Kolkata``, hours start at different
+    moments than before. On a day when clocks go back, the repeated hour is
+    reported as one bucket; on a day when they go forward, the skipped hour
+    appears as an empty bucket. No event is lost or counted twice.
+  - Aware ``datetime`` arguments keep their own time zone, as before. To
+    keep counting in UTC, pass ``today`` and the ``time_series()`` bounds
+    as aware UTC datetimes.
+
+* **Backwards incompatible**: fixed ``this_hour()`` and ``this_minute()``
+  counting the first hour and minute of the day instead of the current
+  ones. They now use the current local time and ignore any time part of
+  an explicit ``today``; use ``for_hour()`` or ``for_minute()`` for a
+  specific moment. ``this_day()`` and longer intervals still use ``today``.
+
 2.2.2 (2026-11-14)
 ~~~~~~~~~~~~~~~~~~
 
