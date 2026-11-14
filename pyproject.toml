@@ -51,6 +51,7 @@ dev = [
   "pytest-django==4.14.0",
   "pytest-sugar==1.1.1",
   "ruff==0.17.4",
+  "time-machine==3.6.0",
 ]
 
 [tool.hatch]
