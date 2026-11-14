@@ -2,13 +2,13 @@
 
 [Full report](https://htmlpreview.github.io/?https://github.com/bashu/django-qsstats-magic/blob/python-coverage-comment-action-data/htmlcov/index.html)
 
-| Name                    |    Stmts |     Miss |   Cover |   Missing |
-|------------------------ | -------: | -------: | ------: | --------: |
-| qsstats/\_\_init\_\_.py |      109 |        8 |     93% |99-100, 103-104, 122-123, 141, 144 |
-| qsstats/exceptions.py   |       11 |        0 |    100% |           |
-| qsstats/models.py       |        0 |        0 |    100% |           |
-| qsstats/utils.py        |       52 |        4 |     92% |58-66, 68-75 |
-| **TOTAL**               |  **172** |   **12** | **93%** |           |
+| Name                        |    Stmts |     Miss |   Cover |   Missing |
+|---------------------------- | -------: | -------: | ------: | --------: |
+| src/qsstats/\_\_init\_\_.py |      109 |        8 |     93% |99-100, 103-104, 122-123, 141, 144 |
+| src/qsstats/exceptions.py   |       11 |        0 |    100% |           |
+| src/qsstats/models.py       |        0 |        0 |    100% |           |
+| src/qsstats/utils.py        |       52 |        4 |     92% |58-66, 68-75 |
+| **TOTAL**                   |  **172** |   **12** | **93%** |           |
 
 
 ## Setup coverage badge
