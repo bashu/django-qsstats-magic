@@ -1,6 +1,14 @@
 Changes
 -------
 
+2.2.2 (2026-11-14)
+~~~~~~~~~~~~~~~~~~
+
+* Shipped a ``py.typed`` marker, so type checkers now use the package's type
+  hints instead of treating ``qsstats`` as untyped. Projects running mypy or
+  a similar checker may see new errors where calls do not match the hints.
+* Fixed the README link to the usage examples in the tests.
+
 2.2.1 (2026-11-14)
 ~~~~~~~~~~~~~~~~~~
 

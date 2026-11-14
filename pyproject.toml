@@ -4,7 +4,7 @@ requires = [ "hatch-fancy-pypi-readme>=24.1", "hatchling>=1.27" ]
 
 [project]
 name = "django-qsstats-magic"
-version = "2.2.1"
+version = "2.2.2"
 description = "A django microframework that eases the generation of aggregate data for querysets."
 license = "BSD-3-Clause"
 license-files = [ "LICENSE" ]
@@ -139,7 +139,7 @@ keep_full_version = true
 # ==== mypy ====
 [tool.mypy]
 ignore_missing_imports = true
-python_version = "3.15"
+python_version = "3.11"
 check_untyped_defs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
