@@ -4,11 +4,11 @@
 
 | Name                        |    Stmts |     Miss |   Cover |   Missing |
 |---------------------------- | -------: | -------: | ------: | --------: |
-| src/qsstats/\_\_init\_\_.py |      109 |        8 |     93% |99-100, 103-104, 122-123, 141, 144 |
+| src/qsstats/\_\_init\_\_.py |      110 |        8 |     93% |100-101, 104-105, 123-124, 142, 145 |
 | src/qsstats/exceptions.py   |       11 |        0 |    100% |           |
 | src/qsstats/models.py       |        0 |        0 |    100% |           |
-| src/qsstats/utils.py        |       52 |        4 |     92% |58-66, 68-75 |
-| **TOTAL**                   |  **172** |   **12** | **93%** |           |
+| src/qsstats/utils.py        |       52 |        4 |     92% |60-68, 70-77 |
+| **TOTAL**                   |  **173** |   **12** | **93%** |           |
 
 
 ## Setup coverage badge
