@@ -81,7 +81,7 @@ class QuerySetStats:
         msg = f"{type(self).__name__!r} object has no attribute {name!r}"
         raise AttributeError(msg, name=name, obj=self)
 
-    def time_series(  # noqa: PLR0913, PLR0917
+    def time_series(  # noqa: PLR0913, PLR0917, C901
         self,
         start: dt.datetime | dt.date,
         end: dt.datetime | dt.date | None = None,
@@ -159,6 +159,12 @@ class QuerySetStats:
             for _ in range(num):
                 value = value + (data.get(moment) or 0)
                 moment = moment + utils.step(interval)
+
+                # Nothing is counted past the end, so a huge count must not
+                # keep stepping through empty units.
+                if moment >= end:
+                    break
+
             stat_list.append((bucket_start, value))
 
         return stat_list

@@ -162,14 +162,40 @@ def test_pivot_invalid_operator(active_users_stats: QuerySetStats) -> None:
         active_users_stats.pivot(active_users_stats.today, operator="monkeys")
 
 
-def test_time_series_invalid_interval(active_users_stats: QuerySetStats) -> None:
+@pytest.mark.parametrize(
+    "interval",
+    [
+        pytest.param("monkeys", id="unknown"),
+        pytest.param("day", id="singular"),
+        pytest.param("2day", id="singular-with-count"),
+        pytest.param("0days", id="zero-count"),
+        pytest.param("daysss", id="trailing-letters"),
+        pytest.param("Days", id="capitalized"),
+        pytest.param("2days3", id="trailing-digits"),
+    ],
+)
+def test_time_series_invalid_interval(
+    active_users_stats: QuerySetStats,
+    interval: str,
+) -> None:
     today = active_users_stats.today
 
     with pytest.raises(
         InvalidIntervalError,
-        match=r"Interval \(monkey\) not supported",
+        match=rf"Interval \({interval}\) not supported",
     ):
-        active_users_stats.time_series(today, today, interval="monkeys")
+        active_users_stats.time_series(today, today, interval=interval)
+
+
+def test_time_series_count_beyond_range_gives_one_bucket(
+    joined_users_stats_factory: StatsFactory,
+    today: dt.datetime,
+) -> None:
+    stats = joined_users_stats_factory([today.date()])
+
+    time_series = stats.time_series(today, today, interval="1000000days")
+
+    assert time_series == [(today, 1)]
 
 
 def test_unknown_attribute_error_has_name() -> None:

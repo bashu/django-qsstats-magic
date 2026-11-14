@@ -6,6 +6,12 @@ Changes
 
 * Switched the build backend from setuptools to hatchling and moved the
   package to the ``src`` layout. The installed package is unchanged.
+* Fixed ``time_series()`` hanging forever on a singular interval (e.g.
+  ``interval='day'``) or a zero count (``'0days'``). These, and any other
+  interval outside the documented plural units with an optional positive
+  count, now raise ``InvalidIntervalError`` before querying.
+* Fixed ``time_series()`` stepping through every unit of a huge count
+  (e.g. ``'1000000days'``) past the end of the range.
 
 2.2.0 (2026-11-11)
 ~~~~~~~~~~~~~~~~~~
