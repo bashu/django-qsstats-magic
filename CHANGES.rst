@@ -1,6 +1,12 @@
 Changes
 -------
 
+2.2.1 (unreleased)
+~~~~~~~~~~~~~~~~~~
+
+* Switched the build backend from setuptools to hatchling and moved the
+  package to the ``src`` layout. The installed package is unchanged.
+
 2.2.0 (2026-11-11)
 ~~~~~~~~~~~~~~~~~~
 
