@@ -1,7 +1,7 @@
 Changes
 -------
 
-2.2.1 (unreleased)
+2.2.1 (2026-11-14)
 ~~~~~~~~~~~~~~~~~~
 
 * Switched the build backend from setuptools to hatchling and moved the
