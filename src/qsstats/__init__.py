@@ -133,7 +133,7 @@ class QuerySetStats:
             .annotate(agg=aggregate)
         )
 
-        today = utils._remove_time(timezone.now())  # noqa: SLF001
+        today = utils._remove_time(utils._get_local_now())  # noqa: SLF001
 
         def to_dt(
             truncated: dt.datetime | dt.date | str,
@@ -218,7 +218,7 @@ class QuerySetStats:
 
     # Utility functions
     def update_today(self) -> dt.datetime:
-        self.today = utils._remove_time(timezone.now())  # noqa: SLF001
+        self.today = utils._remove_time(utils._get_local_now())  # noqa: SLF001
         return self.today
 
     def _aggregate(

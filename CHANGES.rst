@@ -1,6 +1,22 @@
 Changes
 -------
 
+3.0.0 (unreleased)
+~~~~~~~~~~~~~~~~~~
+
+* **Backwards incompatible**: with ``USE_TZ = True``, days, weeks, months,
+  quarters and years now start at local midnight in the current time zone
+  (``TIME_ZONE``, or the one activated with ``timezone.activate()``) instead
+  of at UTC midnight. This affects ``this_*()``, the default ``today``, and
+  ``for_*()``/``time_series()`` called with ``datetime.date`` values. In a
+  project whose ``TIME_ZONE`` is not UTC, counts near midnight move to the
+  local day they belong to, so totals per day, week or month can change.
+  Aware ``datetime`` arguments keep their own time zone, as before.
+* Hourly and minutely ``time_series()`` follow the local clock as well: on a
+  day when clocks go back the repeated hour is reported as one bucket, and on
+  a day when they go forward the skipped hour appears as an empty bucket.
+  No event is lost or counted twice.
+
 2.2.2 (2026-11-14)
 ~~~~~~~~~~~~~~~~~~
 

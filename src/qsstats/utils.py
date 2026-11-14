@@ -1,6 +1,7 @@
 import datetime as dt
 import re
 
+from django.conf import settings
 from django.utils import timezone
 
 from dateutil.relativedelta import MO
@@ -13,10 +14,29 @@ TIME_SERIES_UNITS = frozenset(
 )
 
 
+def _get_local_now() -> dt.datetime:
+    """The current moment in the active time zone.
+
+    timezone.now() is always UTC under USE_TZ, so day boundaries built from it
+    would fall at UTC midnight instead of local midnight. Without USE_TZ it is
+    already naive local time.
+    """
+
+    if settings.USE_TZ:
+        return timezone.localtime()
+
+    return timezone.now()
+
+
 def _remove_time(
     moment: dt.datetime | dt.date,
 ) -> dt.datetime:
-    tzinfo = moment.tzinfo if isinstance(moment, dt.datetime) else timezone.now().tzinfo
+
+    if isinstance(moment, dt.datetime):
+        tzinfo = moment.tzinfo
+    else:
+        tzinfo = _get_local_now().tzinfo
+
     return dt.datetime(moment.year, moment.month, moment.day, tzinfo=tzinfo)
 
 

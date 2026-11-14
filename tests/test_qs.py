@@ -11,13 +11,13 @@ from qsstats import InvalidOperatorError
 from qsstats import QuerySetMissingError
 from qsstats import QuerySetStats
 
-from .conftest import StatsFactory
+from .conftest import QuerySetStatsFactory
 
 
 def test_this_day_counts_only_filtered_queryset(
-    active_users_stats: QuerySetStats,
+    active_users_qss: QuerySetStats,
 ) -> None:
-    assert active_users_stats.this_day() == 1
+    assert active_users_qss.this_day() == 1
 
 
 @pytest.mark.parametrize(
@@ -28,7 +28,7 @@ def test_this_day_counts_only_filtered_queryset(
     ],
 )
 def test_time_series_days(
-    joined_users_stats_factory: StatsFactory,
+    qss_for_date_joined_factory: QuerySetStatsFactory,
     today: dt.datetime,
     to_moment: Callable[[dt.datetime], dt.datetime | dt.date],
 ) -> None:
@@ -38,19 +38,39 @@ def test_time_series_days(
         for count in range(1, 8)
         for offset in range(count)
     ]
-    stats = joined_users_stats_factory(join_dates)
+    qss = qss_for_date_joined_factory(join_dates)
     moment = to_moment(today)
 
-    time_series = stats.time_series(moment - dt.timedelta(days=7), moment)
+    time_series = qss.time_series(moment - dt.timedelta(days=7), moment)
 
     assert [value for _, value in time_series] == [0, 1, 2, 3, 4, 5, 6, 7]
 
 
-def test_time_series_weeks(joined_users_stats_factory: StatsFactory) -> None:
-    day = dt.date(year=2013, month=4, day=5)
-    stats = joined_users_stats_factory([day])
+def test_this_day_counts_only_filtered_queryset_local_timezone(
+    localtime_user_qss: QuerySetStats,
+) -> None:
+    assert localtime_user_qss.this_day() == 1
 
-    time_series = stats.time_series(
+
+def test_time_series_days_local_timezone(
+    localtime_user_qss: QuerySetStats,
+) -> None:
+    time_series = localtime_user_qss.time_series(
+        dt.date(2026, 11, 13),
+        dt.date(2026, 11, 14),
+    )
+
+    assert [(label.date(), value) for label, value in time_series] == [
+        (dt.date(2026, 11, 13), 0),
+        (dt.date(2026, 11, 14), 1),
+    ]
+
+
+def test_time_series_weeks(qss_for_date_joined_factory: QuerySetStatsFactory) -> None:
+    day = dt.date(year=2013, month=4, day=5)
+    qss = qss_for_date_joined_factory([day])
+
+    time_series = qss.time_series(
         day - dt.timedelta(days=30),
         day,
         interval="weeks",
@@ -67,7 +87,9 @@ def test_time_series_weeks(joined_users_stats_factory: StatsFactory) -> None:
     ]
 
 
-def test_time_series_quarters(joined_users_stats_factory: StatsFactory) -> None:
+def test_time_series_quarters(
+    qss_for_date_joined_factory: QuerySetStatsFactory,
+) -> None:
     year = 2013
     quarter_starts = [
         dt.date(year, 1, 1),
@@ -81,9 +103,9 @@ def test_time_series_quarters(joined_users_stats_factory: StatsFactory) -> None:
         for quarter, quarter_start in enumerate(quarter_starts, start=1)
         for _ in range(quarter)
     ]
-    stats = joined_users_stats_factory(join_dates)
+    qss = qss_for_date_joined_factory(join_dates)
 
-    time_series = stats.time_series(
+    time_series = qss.time_series(
         dt.date(year, 1, 1),
         dt.date(year, 12, 31),
         interval="quarters",
@@ -93,15 +115,15 @@ def test_time_series_quarters(joined_users_stats_factory: StatsFactory) -> None:
 
 
 def test_time_series_multi_unit_buckets_labeled_by_start(
-    joined_users_stats_factory: StatsFactory,
+    qss_for_date_joined_factory: QuerySetStatsFactory,
     today: dt.datetime,
 ) -> None:
     # A "2days" bucket covering days 0-1 must be labeled day 0,
     # not drift forward to day 1.
     join_dates = [today.date() + dt.timedelta(days=offset) for offset in range(5)]
-    stats = joined_users_stats_factory(join_dates)
+    qss = qss_for_date_joined_factory(join_dates)
 
-    time_series = stats.time_series(
+    time_series = qss.time_series(
         today,
         today + dt.timedelta(days=4),
         interval="2days",
@@ -115,7 +137,7 @@ def test_time_series_multi_unit_buckets_labeled_by_start(
 
 
 def test_until(
-    active_users_stats: QuerySetStats,
+    active_users_qss: QuerySetStats,
     active_user: User,
     now: dt.datetime,
     today: dt.datetime,
@@ -123,14 +145,14 @@ def test_until(
     active_user.date_joined = today
     active_user.save()
 
-    assert active_users_stats.until(now) == 1
-    assert active_users_stats.until(today) == 1
-    assert active_users_stats.until(today - dt.timedelta(days=1)) == 0
-    assert active_users_stats.until_now() == 1
+    assert active_users_qss.until(now) == 1
+    assert active_users_qss.until(today) == 1
+    assert active_users_qss.until(today - dt.timedelta(days=1)) == 0
+    assert active_users_qss.until_now() == 1
 
 
 def test_after(
-    active_users_stats: QuerySetStats,
+    active_users_qss: QuerySetStats,
     active_user: User,
     now: dt.datetime,
     today: dt.datetime,
@@ -138,14 +160,14 @@ def test_after(
     active_user.date_joined = today
     active_user.save()
 
-    assert active_users_stats.after(now) == 0
-    assert active_users_stats.after(today) == 1
-    assert active_users_stats.after(today + dt.timedelta(days=1)) == 0
-    assert active_users_stats.after_now() == 0
+    assert active_users_qss.after(now) == 0
+    assert active_users_qss.after(today) == 1
+    assert active_users_qss.after(today + dt.timedelta(days=1)) == 0
+    assert active_users_qss.after_now() == 0
 
 
 def test_pivot_defaults_to_lte(
-    active_users_stats: QuerySetStats,
+    active_users_qss: QuerySetStats,
     active_user: User,
     now: dt.datetime,
     today: dt.datetime,
@@ -153,13 +175,13 @@ def test_pivot_defaults_to_lte(
     active_user.date_joined = today
     active_user.save()
 
-    assert active_users_stats.pivot(now) == 1
+    assert active_users_qss.pivot(now) == 1
 
 
-def test_pivot_invalid_operator(active_users_stats: QuerySetStats) -> None:
+def test_pivot_invalid_operator(active_users_qss: QuerySetStats) -> None:
 
     with pytest.raises(InvalidOperatorError, match="Please provide a valid operator"):
-        active_users_stats.pivot(active_users_stats.today, operator="monkeys")
+        active_users_qss.pivot(active_users_qss.today, operator="monkeys")
 
 
 @pytest.mark.parametrize(
@@ -175,37 +197,37 @@ def test_pivot_invalid_operator(active_users_stats: QuerySetStats) -> None:
     ],
 )
 def test_time_series_invalid_interval(
-    active_users_stats: QuerySetStats,
+    active_users_qss: QuerySetStats,
     interval: str,
 ) -> None:
-    today = active_users_stats.today
+    today = active_users_qss.today
 
     with pytest.raises(
         InvalidIntervalError,
         match=rf"Interval \({interval}\) not supported",
     ):
-        active_users_stats.time_series(today, today, interval=interval)
+        active_users_qss.time_series(today, today, interval=interval)
 
 
 def test_time_series_count_beyond_range_gives_one_bucket(
-    joined_users_stats_factory: StatsFactory,
+    qss_for_date_joined_factory: QuerySetStatsFactory,
     today: dt.datetime,
 ) -> None:
-    stats = joined_users_stats_factory([today.date()])
+    qss = qss_for_date_joined_factory([today.date()])
 
-    time_series = stats.time_series(today, today, interval="1000000days")
+    time_series = qss.time_series(today, today, interval="1000000days")
 
     assert time_series == [(today, 1)]
 
 
 def test_unknown_attribute_error_has_name() -> None:
-    stats = QuerySetStats()
+    qss = QuerySetStats()
 
     with pytest.raises(AttributeError, match="bogus_attr") as exc_info:
-        stats.bogus_attr  # noqa: B018
+        qss.bogus_attr  # noqa: B018
 
     assert exc_info.value.name == "bogus_attr"
-    assert exc_info.value.obj is stats
+    assert exc_info.value.obj is qss
 
 
 @pytest.mark.parametrize(
@@ -213,10 +235,10 @@ def test_unknown_attribute_error_has_name() -> None:
     ["this_day", "this_month", "this_quarter", "this_year"],
 )
 def test_queryset_missing(method: str) -> None:
-    stats = QuerySetStats(date_field="foo")
+    qss = QuerySetStats(date_field="foo")
 
     with pytest.raises(QuerySetMissingError, match="Please provide a queryset"):
-        getattr(stats, method)()
+        getattr(qss, method)()
 
 
 @pytest.mark.parametrize(
@@ -224,7 +246,7 @@ def test_queryset_missing(method: str) -> None:
     ["this_day", "this_month", "this_quarter", "this_year"],
 )
 def test_date_field_missing(method: str) -> None:
-    stats = QuerySetStats(User.objects.filter(is_active=True))
+    qss = QuerySetStats(User.objects.filter(is_active=True))
 
     with pytest.raises(DateFieldMissingError, match="Please provide a date_field"):
-        getattr(stats, method)()
+        getattr(qss, method)()
