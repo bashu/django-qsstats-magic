@@ -87,7 +87,8 @@ This might print something like::
     New users in the last 7 days: [3, 10, 7, 4, 12, 9, 11]
 
 
-Please see qsstats/tests/test_*.py for similar usage examples.
+Please see the `tests <https://github.com/bashu/django-qsstats-magic/tree/develop/tests>`_
+for similar usage examples.
 
 API
 ---
