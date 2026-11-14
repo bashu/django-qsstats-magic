@@ -4,7 +4,7 @@ requires = [ "hatch-fancy-pypi-readme>=24.1", "hatchling>=1.27" ]
 
 [project]
 name = "django-qsstats-magic"
-version = "2.2.2"
+version = "3.0.0"
 description = "A django microframework that eases the generation of aggregate data for querysets."
 license = "BSD-3-Clause"
 license-files = [ "LICENSE" ]
