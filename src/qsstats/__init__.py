@@ -70,7 +70,14 @@ class QuerySetStats:
         aggregate: Aggregate | None = None,
     ) -> Any | None:
         method = getattr(self, f"for_{interval}")
-        return method(self.today, date_field, aggregate)
+        # ``today`` is a date (midnight), so it cannot tell which hour or minute
+        # is the current one: those come from the clock.
+        moment = (
+            utils._get_local_now()  # noqa: SLF001
+            if interval in {"minute", "hour"}
+            else self.today
+        )
+        return method(moment, date_field, aggregate)
 
     # support for this_* and for_* methods
     def __getattr__(self, name: str) -> Callable[..., Any | None]:

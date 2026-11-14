@@ -16,6 +16,9 @@ Changes
   day when clocks go back the repeated hour is reported as one bucket, and on
   a day when they go forward the skipped hour appears as an empty bucket.
   No event is lost or counted twice.
+* Fixed ``this_hour()`` and ``this_minute()`` counting the first hour and
+  minute of the day instead of the current ones: they now use the current
+  local time. ``today`` is still used by ``this_day()`` and longer intervals.
 
 2.2.2 (2026-11-14)
 ~~~~~~~~~~~~~~~~~~

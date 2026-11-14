@@ -21,6 +21,38 @@ def test_this_day_counts_only_filtered_queryset(
 
 
 @pytest.mark.parametrize(
+    ("method", "expected"),
+    [
+        pytest.param("this_minute", 2, id="minute"),
+        pytest.param("this_hour", 3, id="hour"),
+        pytest.param("this_day", 4, id="day"),
+    ],
+)
+@pytest.mark.django_db
+def test_this_interval_relative_to_current_time(
+    now: dt.datetime,
+    today: dt.datetime,
+    method: str,
+    expected: int,
+) -> None:
+    # The clock is frozen at the start of a minute, so all of these fall on
+    # the same day, but only some of them in the current hour or minute.
+    join_moments = [
+        today,
+        now,
+        now + dt.timedelta(seconds=30),
+        now + dt.timedelta(minutes=10),
+    ]
+
+    for idx, date_joined in enumerate(join_moments):
+        User.objects.create_user(f"user-{idx}", date_joined=date_joined)
+
+    qss = QuerySetStats(User.objects.all(), "date_joined")
+
+    assert getattr(qss, method)() == expected
+
+
+@pytest.mark.parametrize(
     "to_moment",
     [
         pytest.param(lambda day: day, id="datetime"),
