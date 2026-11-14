@@ -12,7 +12,7 @@ from qsstats.exceptions import InvalidIntervalError
 def _remove_time(
     moment: dt.datetime | dt.date,
 ) -> dt.datetime:
-    tzinfo = getattr(moment, "tzinfo", timezone.now().tzinfo)
+    tzinfo = moment.tzinfo if isinstance(moment, dt.datetime) else timezone.now().tzinfo
     return dt.datetime(moment.year, moment.month, moment.day, tzinfo=tzinfo)
 
 
@@ -42,7 +42,9 @@ def step(interval: str) -> relativedelta:
     """
     if interval == "quarters":
         return relativedelta(months=3)
-    return relativedelta(**{interval: 1})
+    # dt1 and dt2 are passed explicitly so the type checker matches the unit
+    # keyword only against relativedelta's keyword parameters.
+    return relativedelta(None, None, **{interval: 1})
 
 
 def get_bounds(
