@@ -12,6 +12,7 @@ maintainers = [ { name = "Basil Shubin", email = "basil.shubin@gmail.com" } ]
 authors = [
   { name = "Matt Croydon", email = "mcroydon@gmail.com" },
   { name = "Mikhail Korobov", email = "kmike84@gmail.com" },
+  { name = "Basil Shubin", email = "basil.shubin@gmail.com" },
 ]
 requires-python = ">=3.11"
 classifiers = [
