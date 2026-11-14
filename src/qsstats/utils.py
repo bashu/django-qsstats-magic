@@ -8,11 +8,15 @@ from dateutil.relativedelta import relativedelta
 
 from qsstats.exceptions import InvalidIntervalError
 
+TIME_SERIES_UNITS = frozenset(
+    {"minutes", "hours", "days", "weeks", "months", "quarters", "years"},
+)
+
 
 def _remove_time(
     moment: dt.datetime | dt.date,
 ) -> dt.datetime:
-    tzinfo = getattr(moment, "tzinfo", timezone.now().tzinfo)
+    tzinfo = moment.tzinfo if isinstance(moment, dt.datetime) else timezone.now().tzinfo
     return dt.datetime(moment.year, moment.month, moment.day, tzinfo=tzinfo)
 
 
@@ -25,13 +29,20 @@ def _to_datetime(
 
 
 def _parse_interval(interval: str) -> tuple[int, str]:
-    num = 1
-    match = re.match(r"(\d+)([A-Za-z]+)", interval)
+    """Split a time series interval such as ``"2days"`` into a count and a unit.
 
-    if match:
-        num = int(match.group(1))
-        interval = match.group(2)
-    return num, interval
+    Only plural units are accepted: a singular one would make step() set an
+    absolute field (``relativedelta(day=1)``) instead of advancing, and a zero
+    count would never advance either, so time_series() would loop forever.
+    """
+    # The optional count must be positive: "0days" is rejected, "02days" is 2.
+    match = re.fullmatch(r"(0*[1-9]\d*)?([a-z]+)", interval)
+
+    if match is None or match.group(2) not in TIME_SERIES_UNITS:
+        msg = f"Interval ({interval}) not supported."
+        raise InvalidIntervalError(msg)
+
+    return int(match.group(1) or 1), match.group(2)
 
 
 def step(interval: str) -> relativedelta:
@@ -42,7 +53,9 @@ def step(interval: str) -> relativedelta:
     """
     if interval == "quarters":
         return relativedelta(months=3)
-    return relativedelta(**{interval: 1})
+    # dt1 and dt2 are passed explicitly so the type checker matches the unit
+    # keyword only against relativedelta's keyword parameters.
+    return relativedelta(None, None, **{interval: 1})
 
 
 def get_bounds(

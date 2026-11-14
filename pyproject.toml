@@ -1,16 +1,18 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = [ "setuptools>=61" ]
+build-backend = "hatchling.build"
+requires = [ "hatch-fancy-pypi-readme>=24.1", "hatchling>=1.27" ]
 
 [project]
 name = "django-qsstats-magic"
-version = "2.2.0"
+version = "2.2.1"
 description = "A django microframework that eases the generation of aggregate data for querysets."
 license = "BSD-3-Clause"
+license-files = [ "LICENSE" ]
 maintainers = [ { name = "Basil Shubin", email = "basil.shubin@gmail.com" } ]
 authors = [
   { name = "Matt Croydon", email = "mcroydon@gmail.com" },
   { name = "Mikhail Korobov", email = "kmike84@gmail.com" },
+  { name = "Basil Shubin", email = "basil.shubin@gmail.com" },
 ]
 requires-python = ">=3.11"
 classifiers = [
@@ -50,13 +52,15 @@ dev = [
   "pytest-django==4.14.0",
   "pytest-sugar==1.1.1",
   "ruff==0.17.4",
+  "time-machine==3.6.0",
+  "types-python-dateutil==2.9.0.20261104",
 ]
 
-[tool.setuptools]
-packages.find.include = [ "qsstats*" ]
-packages.find.exclude = [ "qsstats.tests*" ]
-dynamic.readme = { file = [ "README.rst", "CHANGES.rst" ], content-type = "text/x-rst" }
-zip-safe = false
+[tool.hatch]
+metadata.hooks.fancy-pypi-readme.content-type = "text/x-rst"
+metadata.hooks.fancy-pypi-readme.fragments = [ { path = "README.rst" }, { text = "\n" }, { path = "CHANGES.rst" } ]
+build.targets.wheel.packages = [ "src/qsstats" ]
+build.targets.sdist.only-include = [ "src", "CHANGES.rst", "README.rst" ]
 
 # ==== ruff ====
 [tool.ruff]
@@ -143,25 +147,15 @@ plugins = [
   "mypy_django_plugin.main",
 ]
 warn_unused_configs = true
-overrides = [
-  # Django migrations should not produce any errors:
-  { module = "*.migrations.*", ignore_errors = true },
-]
 
 [tool.django-stubs]
-django_settings_module = "qsstats.tests.settings"
+django_settings_module = "tests.settings"
 
-[tool.pytest]
-ini_options.minversion = "6.0"
-ini_options.python_files = [
-  "test_*.py",
-  "tests.py",
-]
 # ==== pytest ====
-ini_options.addopts = [ "--ds=qsstats.tests.settings", "--reuse-db", "--import-mode=importlib" ]
+[tool.pytest]
+ini_options.DJANGO_SETTINGS_MODULE = "tests.settings"
 
-# ==== Coverage ====
+# ==== coverage ====
 [tool.coverage]
 run.source = [ "qsstats" ]
-run.omit = [ "*/migrations/*", "*/tests/*" ]
 run.relative_files = true

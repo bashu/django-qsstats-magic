@@ -4,7 +4,7 @@ SECRET_KEY = "DUMMY_SECRET_KEY"  # noqa: S105
 
 # Application definition
 
-PROJECT_APPS = ["qsstats.tests", "qsstats"]
+PROJECT_APPS = ["tests", "qsstats"]
 
 INSTALLED_APPS = [
     "django.contrib.auth",

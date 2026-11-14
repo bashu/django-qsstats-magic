@@ -52,6 +52,7 @@ How many users signed up today? this month? this year?
     print('%s new accounts today.' % qss.this_day())
     print('%s new accounts this week.' % qss.this_week())
     print('%s new accounts this month.' % qss.this_month())
+    print('%s new accounts this quarter.' % qss.this_quarter())
     print('%s new accounts this year.' % qss.this_year())
     print('%s new accounts until now.' % qss.until_now())
 
@@ -60,6 +61,7 @@ This might print something like::
     5 new accounts today.
     11 new accounts this week.
     27 new accounts this month.
+    98 new accounts this quarter.
     377 new accounts this year.
     409 new accounts until now.
 

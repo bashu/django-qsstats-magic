@@ -1,4 +1,5 @@
 import datetime as dt
+from collections.abc import Callable
 from functools import partial
 from typing import Any
 
@@ -36,12 +37,12 @@ class QuerySetStats:
 
     def __init__(
         self,
-        qs: QuerySet | None = None,
+        qs: QuerySet[Any] | None = None,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
         operator: str | None = None,
         today: dt.datetime | None = None,
-    ):
+    ) -> None:
         self.qs = qs
         self.date_field = date_field
         self.aggregate = aggregate or Count("id", distinct=True)
@@ -72,7 +73,7 @@ class QuerySetStats:
         return method(self.today, date_field, aggregate)
 
     # support for this_* and for_* methods
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Callable[..., Any | None]:
         if name.startswith("for_"):
             return partial(self.for_interval, name[4:])
         if name.startswith("this_"):
@@ -80,14 +81,14 @@ class QuerySetStats:
         msg = f"{type(self).__name__!r} object has no attribute {name!r}"
         raise AttributeError(msg, name=name, obj=self)
 
-    def time_series(  # noqa: PLR0913, PLR0917
+    def time_series(  # noqa: PLR0913, PLR0917, C901
         self,
         start: dt.datetime | dt.date,
         end: dt.datetime | dt.date | None = None,
         interval: str = "days",
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
-        engine=None,
+        engine: object = None,
     ) -> list[tuple[dt.datetime, int]]:
         """Aggregate over time intervals using just 1 sql query"""
 
@@ -135,22 +136,22 @@ class QuerySetStats:
         today = utils._remove_time(timezone.now())  # noqa: SLF001
 
         def to_dt(
-            d: dt.datetime | dt.date | str,
+            truncated: dt.datetime | dt.date | str,
         ) -> dt.datetime:
-            if isinstance(d, str):
-                return parse(d, yearfirst=True, default=today)
-            if isinstance(d, dt.datetime):
-                return d
+            if isinstance(truncated, str):
+                return parse(truncated, yearfirst=True, default=today)
+            if isinstance(truncated, dt.datetime):
+                return truncated
             return dt.datetime(
-                year=d.year,
-                month=d.month,
-                day=d.day,
+                year=truncated.year,
+                month=truncated.month,
+                day=truncated.day,
                 tzinfo=start.tzinfo,
             )
 
         data = {to_dt(item["d"]): item["agg"] for item in aggregate_data}
 
-        stat_list = []
+        stat_list: list[tuple[dt.datetime, int]] = []
         moment = start
         while moment < end:
             bucket_start = moment
@@ -158,6 +159,12 @@ class QuerySetStats:
             for _ in range(num):
                 value = value + (data.get(moment) or 0)
                 moment = moment + utils.step(interval)
+
+                # Nothing is counted past the end, so a huge count must not
+                # keep stepping through empty units.
+                if moment >= end:
+                    break
+
             stat_list.append((bucket_start, value))
 
         return stat_list
@@ -218,7 +225,7 @@ class QuerySetStats:
         self,
         date_field: str | None = None,
         aggregate: Aggregate | None = None,
-        filter_kwargs: dict | None = None,
+        filter_kwargs: dict[str, Any] | None = None,
     ) -> Any | None:
         date_field = date_field or self.date_field
         aggregate = aggregate or self.aggregate
