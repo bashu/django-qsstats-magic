@@ -22,7 +22,7 @@ django-qsstats-magic is a refactoring of `django-qsstats
 <https://github.com/mcroydon/django-qsstats>`_ app with slightly
 changed API, simplified internals and faster time_series implementation.
 
-Maintained by `Basil Shubin <https://github.com/bashu/>`_, and some great
+Maintained by `Basil Shubin <https://github.com/bashu/>`_ (who is available for freelance/contract work), and some great
 `contributors <https://github.com/bashu/django-qsstats-magic/contributors>`_.
 
 Installation
